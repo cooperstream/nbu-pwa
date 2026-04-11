@@ -649,6 +649,9 @@
         });
       });
     }
+    window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('PWA installable', e);
+});
   </script>
 </body>
 </html>
