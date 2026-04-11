@@ -670,7 +670,7 @@
   </script>
 </body>
 </html>
-<div id="pwa-debug" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:9999;padding:10px 12px;border-radius:12px;background:#111827;color:#e5e7eb;font:12px/1.4 sans-serif;border:1px solid #334155;">
+<div id="pwa-debug" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:9999;padding:10px 12px;border-radius:12px;background:#111827;color:#e5e7eb;font:12px/1.4 sans-serif;border:1px solid #334155;max-height:40vh;overflow:auto;">
   PWA debug: init...
 </div>
 
@@ -678,39 +678,47 @@
 (async () => {
   const box = document.getElementById('pwa-debug');
 
-  function setLine(text) {
+  function line(text) {
     box.innerHTML += '<br>' + text;
   }
 
   box.textContent = 'PWA debug: start';
+  line('path: ' + location.pathname);
 
   if (!('serviceWorker' in navigator)) {
-    setLine('SW: not supported');
+    line('SW: not supported');
     return;
   }
 
   try {
-    const reg = await navigator.serviceWorker.getRegistration('./');
-    if (reg) {
-      setLine('SW registration: OK');
-      setLine('SW scope: ' + reg.scope);
-    } else {
-      setLine('SW registration: NOT FOUND');
-    }
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    line('register(): OK');
+    line('register scope: ' + reg.scope);
   } catch (e) {
-    setLine('SW error: ' + e.message);
+    line('register(): ERROR -> ' + (e && e.message ? e.message : e));
+    return;
   }
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    setLine('beforeinstallprompt: FIRED');
+  try {
+    const readyReg = await navigator.serviceWorker.ready;
+    line('ready: OK');
+    line('ready scope: ' + readyReg.scope);
+  } catch (e) {
+    line('ready: ERROR -> ' + (e && e.message ? e.message : e));
+  }
+
+  line('controller: ' + (!!navigator.serviceWorker.controller));
+
+  window.addEventListener('beforeinstallprompt', () => {
+    line('beforeinstallprompt: FIRED');
   });
 
   window.addEventListener('appinstalled', () => {
-    setLine('appinstalled: DONE');
+    line('appinstalled: DONE');
   });
 
   setTimeout(() => {
-    setLine('display-mode standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
-  }, 1000);
+    line('display-mode standalone: ' + window.matchMedia('(display-mode: standalone)').matches);
+  }, 1500);
 })();
 </script>
