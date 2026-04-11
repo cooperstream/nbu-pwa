@@ -39,6 +39,8 @@
       color: var(--text);
       font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       min-height: 100%;
+      scrollbar-width: thin;
+      scrollbar-color: #2b3a55 #0b1220;
     }
 
     body {
@@ -101,9 +103,9 @@
     }
 
     .grid {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
     }
 
     .item-wrapper {
@@ -159,8 +161,9 @@
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 14px;
-      letter-spacing: 0.6px;
+      font-size: 17px;
+      letter-spacing: 0;
+      line-height: 1;
       flex: 0 0 auto;
     }
 
@@ -287,40 +290,37 @@
 
     @media (max-width: 560px) {
       .card { padding: 14px; }
+
       .currency-badge {
         width: 44px;
         height: 44px;
         border-radius: 12px;
+        font-size: 15px;
       }
+
       .rate-value { font-size: 18px; }
       .currency-name { max-width: 150px; }
       .chart-wrap { height: 170px; }
       .item-wrapper.active .details { max-height: 290px; }
     }
-    /* Firefox */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: #2b3a55 #0b1220;
-}
 
-/* Chrome, Edge, Safari */
-::-webkit-scrollbar {
-  width: 10px;
-}
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
 
-::-webkit-scrollbar-track {
-  background: #0b1220;
-}
+    ::-webkit-scrollbar-track {
+      background: #0b1220;
+    }
 
-::-webkit-scrollbar-thumb {
-  background: #2b3a55;
-  border-radius: 999px;
-  border: 2px solid #0b1220;
-}
+    ::-webkit-scrollbar-thumb {
+      background: #2b3a55;
+      border-radius: 999px;
+      border: 2px solid #0b1220;
+    }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3b4d70;
-}
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b4d70;
+    }
   </style>
 </head>
 <body>
@@ -344,17 +344,14 @@ html {
   </div>
 
   <script>
-    // Використовуємо старий ендпоінт, який не блокує локальні та міждоменні запити
-    const CURRENT_API = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json";
-
     const currencyMeta = {
-      USD: { name: "Долар США" },
-      EUR: { name: "Євро" },
-      PLN: { name: "Польський злотий" },
-      GBP: { name: "Фунт стерлінгів" },
-      CHF: { name: "Швейцарський франк" },
-      CAD: { name: "Канадський долар" },
-      JPY: { name: "Японська єна" }
+      USD: { name: "Долар США", symbol: "$" },
+      EUR: { name: "Євро", symbol: "€" },
+      PLN: { name: "Польський злотий", symbol: "zł" },
+      GBP: { name: "Фунт стерлінгів", symbol: "£" },
+      CHF: { name: "Швейцарський франк", symbol: "Fr" },
+      CAD: { name: "Канадський долар", symbol: "C$" },
+      JPY: { name: "Японська єна", symbol: "¥" }
     };
 
     const codes = Object.keys(currencyMeta);
@@ -374,8 +371,8 @@ html {
         const todayStr = `${y}${m}${d}`;
 
         const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${todayStr}&json`;
-        
         const response = await fetch(url);
+
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
@@ -418,7 +415,7 @@ html {
         wrapper.innerHTML = `
           <button class="card" type="button" aria-expanded="false" aria-controls="details-${item.cc}">
             <div class="currency-info">
-              <div class="currency-badge">${item.cc}</div>
+              <div class="currency-badge">${currencyMeta[item.cc]?.symbol || item.cc}</div>
               <div class="currency-text">
                 <div class="currency-code">${item.cc}</div>
                 <div class="currency-name">${item.txt}</div>
@@ -656,9 +653,9 @@ html {
 
     function escapeHtml(str) {
       return String(str)
-        .replaceAll("&", "&")
-        .replaceAll("<", "<")
-        .replaceAll(">", ">")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
