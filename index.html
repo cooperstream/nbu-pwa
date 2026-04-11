@@ -7,7 +7,9 @@
   
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0b1220">
-  <link rel="apple-touch-icon" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -641,17 +643,30 @@
 
     loadCurrentRates();
 
-    // Реєстрація Service Worker для перетворення у PWA (додаток на телефон)
+    // Реєстрація Service Worker для PWA
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/nbu-pwa/sw.js').catch(err => {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('./sw.js');
+          console.log('Service Worker зареєстровано:', registration.scope);
+        } catch (err) {
           console.log('Помилка реєстрації Service Worker:', err);
-        });
+        }
       });
     }
+
+    let deferredPrompt = null;
+
     window.addEventListener('beforeinstallprompt', (e) => {
-  console.log('PWA installable', e);
-});
+      e.preventDefault();
+      deferredPrompt = e;
+      console.log('PWA installable', e);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      console.log('PWA встановлено');
+    });
   </script>
 </body>
 </html>
