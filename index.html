@@ -293,6 +293,8 @@
       }
       .rate-value { font-size: 18px; }
       .currency-name { max-width: 150px; }
+      .chart-wrap { height: 170px; }
+      .item-wrapper.active .details { max-height: 290px; }
     }
   </style>
 </head>
@@ -326,7 +328,8 @@
       PLN: { name: "Польський злотий" },
       GBP: { name: "Фунт стерлінгів" },
       CHF: { name: "Швейцарський франк" },
-      CAD: { name: "Канадський долар" }
+      CAD: { name: "Канадський долар" },
+      JPY: { name: "Японська єна" }
     };
 
     const codes = Object.keys(currencyMeta);
@@ -337,17 +340,14 @@
     const historyCache = {};
     const loadingPromises = {};
 
-      // 1. Завантаження поточних курсів (ВИПРАВЛЕНО НА СЬОГОДНІШНІЙ ДЕНЬ)
     async function loadCurrentRates() {
       try {
-        // Формуємо поточну дату у форматі YYYYMMDD
         const now = new Date();
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, "0");
         const d = String(now.getDate()).padStart(2, "0");
         const todayStr = `${y}${m}${d}`;
 
-        // Запитуємо курс жорстко на сьогодні, щоб збігалося з сайтом НБУ
         const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${todayStr}&json`;
         
         const response = await fetch(url);
@@ -381,7 +381,6 @@
         lastUpdated.textContent = "Дані недоступні";
       }
     }
-
 
     function renderCards(rates) {
       grid.innerHTML = "";
@@ -479,7 +478,6 @@
       }
     }
 
-    // Кешування запитів
     async function getHistory(cc) {
       if (historyCache[cc]) return historyCache[cc];
       if (loadingPromises[cc]) return loadingPromises[cc];
@@ -496,7 +494,6 @@
       return loadingPromises[cc];
     }
 
-    // 2. Паралельне викачування історії
     async function fetchHistory(cc) {
       const now = new Date();
       const requests = [];
@@ -515,7 +512,7 @@
               }
               return null;
             })
-            .catch(() => null) // Ігноруємо помилки мережі для окремих точок
+            .catch(() => null)
         );
       }
 
@@ -643,29 +640,28 @@
 
     loadCurrentRates();
 
-    // Реєстрація Service Worker для PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
         try {
-          const registration = await navigator.serviceWorker.register('./sw.js');
-          console.log('Service Worker зареєстровано:', registration.scope);
+          const registration = await navigator.serviceWorker.register("./sw.js");
+          console.log("Service Worker зареєстровано:", registration.scope);
         } catch (err) {
-          console.log('Помилка реєстрації Service Worker:', err);
+          console.log("Помилка реєстрації Service Worker:", err);
         }
       });
     }
 
     let deferredPrompt = null;
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      console.log('PWA installable', e);
+      console.log("PWA installable", e);
     });
 
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener("appinstalled", () => {
       deferredPrompt = null;
-      console.log('PWA встановлено');
+      console.log("PWA встановлено");
     });
   </script>
 </body>
