@@ -297,6 +297,30 @@
       .chart-wrap { height: 170px; }
       .item-wrapper.active .details { max-height: 290px; }
     }
+    /* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #2b3a55 #0b1220;
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1220;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2b3a55;
+  border-radius: 999px;
+  border: 2px solid #0b1220;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4d70;
+}
   </style>
 </head>
 <body>
