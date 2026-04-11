@@ -644,7 +644,7 @@
     // Реєстрація Service Worker для перетворення у PWA (додаток на телефон)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
+        navigator.serviceWorker.register('/nbu-pwa/sw.js').catch(err => {
           console.log('Помилка реєстрації Service Worker:', err);
         });
       });
