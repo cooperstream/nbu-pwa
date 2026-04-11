@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>НБУ Дашборд Валют</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --panel-2: #0f172a;
+      --panel-3: #1f2937;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #243041;
+      --primary: #22c55e;
+      --primary-soft: rgba(34, 197, 94, 0.16);
+      --danger: #f87171;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 30%),
+        linear-gradient(180deg, #09111d 0%, #0b1220 100%);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100%;
+    }
+
+    body {
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .dashboard {
+      width: 100%;
+      max-width: 760px;
+    }
+
+    .header {
+      background: linear-gradient(180deg, rgba(31, 41, 55, 0.96), rgba(17, 24, 39, 0.96));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px 18px 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.06));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      border: 1px solid rgba(34, 197, 94, 0.22);
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .last-updated {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item-wrapper {
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .item-wrapper:hover {
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .item-wrapper.active {
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+
+    .card {
+      width: 100%;
+      background: transparent;
+      color: inherit;
+      border: none;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .card:focus-visible {
+      outline: 2px solid rgba(34, 197, 94, 0.6);
+      outline-offset: -2px;
+    }
+
+    .currency-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .currency-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(34, 197, 94, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.6px;
+      flex: 0 0 auto;
+    }
+
+    .currency-text {
+      min-width: 0;
+    }
+
+    .currency-code {
+      font-weight: 800;
+      font-size: 17px;
+      line-height: 1.1;
+    }
+
+    .currency-name {
+      margin-top: 3px;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .right-side {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .rate-box {
+      text-align: right;
+    }
+
+    .rate-value {
+      color: #86efac;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .rate-note {
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chevron {
+      width: 18px;
+      height: 18px;
+      color: var(--muted);
+      transition: transform 0.25s ease, color 0.25s ease;
+      flex: 0 0 auto;
+    }
+
+    .item-wrapper.active .chevron {
+      transform: rotate(180deg);
+      color: #86efac;
+    }
+
+    .details {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
+      padding: 0 16px;
+      border-top: 0 solid transparent;
+    }
+
+    .item-wrapper.active .details {
+      max-height: 360px;
+      opacity: 1;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .details-inner {
+      padding-top: 14px;
+    }
+
+    .loader-text,
+    .chart-error,
+    .chart-empty {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 18px 10px;
+    }
+
+    .chart-error {
+      color: var(--danger);
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .chart-wrap.ready {
+      display: block;
+    }
+
+    .hint {
+      margin-top: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .loading-screen,
+    .global-error {
+      padding: 28px 16px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .global-error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 560px) {
+      .card { padding: 14px; }
+      .currency-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
+      .rate-value { font-size: 18px; }
+      .currency-name { max-width: 150px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">₴</div>
+        <div>
+          <h1>Курси НБУ</h1>
+          <div class="subtitle">Поточний курс за останні 12 місяців</div>
+        </div>
+      </div>
+      <div class="last-updated" id="last-updated">Завантаження...</div>
+    </div>
+
+    <div class="grid" id="rates-grid">
+      <div class="loading-screen">Завантаження даних...</div>
+    </div>
+
+    <div class="hint">Натисни на валюту, щоб розгорнути графік.</div>
+  </div>
+
+  <script>
+    // Використовуємо старий ендпоінт, який не блокує локальні та міждоменні запити
+    const CURRENT_API = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json";
+
+    const currencyMeta = {
+      USD: { name: "Долар США" },
+      EUR: { name: "Євро" },
+      PLN: { name: "Польський злотий" },
+      GBP: { name: "Фунт стерлінгів" },
+      CHF: { name: "Швейцарський франк" },
+      CAD: { name: "Канадський долар" }
+    };
+
+    const codes = Object.keys(currencyMeta);
+    const grid = document.getElementById("rates-grid");
+    const lastUpdated = document.getElementById("last-updated");
+
+    const chartInstances = {};
+    const historyCache = {};
+    const loadingPromises = {};
+
+      // 1. Завантаження поточних курсів (ВИПРАВЛЕНО НА СЬОГОДНІШНІЙ ДЕНЬ)
+    async function loadCurrentRates() {
+      try {
+        // Формуємо поточну дату у форматі YYYYMMDD
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        const d = String(now.getDate()).padStart(2, "0");
+        const todayStr = `${y}${m}${d}`;
+
+        // Запитуємо курс жорстко на сьогодні, щоб збігалося з сайтом НБУ
+        const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${todayStr}&json`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        const filtered = data
+          .filter(item => codes.includes(item.cc))
+          .map(item => ({
+            cc: item.cc,
+            txt: currencyMeta[item.cc]?.name || item.txt,
+            rate: item.rate,
+            date: item.exchangedate
+          }))
+          .sort((a, b) => codes.indexOf(a.cc) - codes.indexOf(b.cc));
+
+        if (!filtered.length) {
+          throw new Error("API не повернуло очікувані валюти");
+        }
+
+        renderCards(filtered);
+        lastUpdated.textContent = `Дані на: ${filtered[0].date}`;
+      } catch (error) {
+        grid.innerHTML = `
+          <div class="global-error">
+            Не вдалося завантажити курси НБУ.<br>
+            <small>${escapeHtml(error.message)} (Можливо, немає доступу до Інтернету)</small>
+          </div>
+        `;
+        lastUpdated.textContent = "Дані недоступні";
+      }
+    }
+
+
+    function renderCards(rates) {
+      grid.innerHTML = "";
+
+      rates.forEach(item => {
+        const wrapper = document.createElement("section");
+        wrapper.className = "item-wrapper";
+        wrapper.id = `wrap-${item.cc}`;
+
+        wrapper.innerHTML = `
+          <button class="card" type="button" aria-expanded="false" aria-controls="details-${item.cc}">
+            <div class="currency-info">
+              <div class="currency-badge">${item.cc}</div>
+              <div class="currency-text">
+                <div class="currency-code">${item.cc}</div>
+                <div class="currency-name">${item.txt}</div>
+              </div>
+            </div>
+
+            <div class="right-side">
+              <div class="rate-box">
+                <div class="rate-value">${formatRate(item.rate)} ₴</div>
+                <div class="rate-note">за 1 ${item.cc}</div>
+              </div>
+
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </button>
+
+          <div class="details" id="details-${item.cc}">
+            <div class="details-inner">
+              <div class="loader-text" id="loader-${item.cc}" style="display:none;">Завантаження історії...</div>
+              <div class="chart-error" id="error-${item.cc}" style="display:none;"></div>
+              <div class="chart-empty" id="empty-${item.cc}" style="display:none;">Немає історичних даних.</div>
+              <div class="chart-wrap" id="chart-wrap-${item.cc}">
+                <canvas id="chart-${item.cc}"></canvas>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const button = wrapper.querySelector(".card");
+        button.addEventListener("click", () => handleCardClick(item.cc));
+
+        grid.appendChild(wrapper);
+      });
+    }
+
+    async function handleCardClick(cc) {
+      const wrapper = document.getElementById(`wrap-${cc}`);
+      const button = wrapper.querySelector(".card");
+      const isActive = wrapper.classList.contains("active");
+
+      document.querySelectorAll(".item-wrapper.active").forEach(el => {
+        if (el !== wrapper) {
+          el.classList.remove("active");
+          const btn = el.querySelector(".card");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      if (isActive) {
+        wrapper.classList.remove("active");
+        button.setAttribute("aria-expanded", "false");
+        return;
+      }
+
+      wrapper.classList.add("active");
+      button.setAttribute("aria-expanded", "true");
+
+      if (chartInstances[cc]) {
+        chartInstances[cc].resize();
+        return;
+      }
+
+      try {
+        showLoader(cc, true);
+        hideMessage(cc, "error");
+        hideMessage(cc, "empty");
+
+        const history = await getHistory(cc);
+        showLoader(cc, false);
+
+        if (!history.length) {
+          showMessage(cc, "empty", "Немає історичних даних.");
+          return;
+        }
+
+        renderHistoryChart(cc, history);
+      } catch (error) {
+        showLoader(cc, false);
+        showMessage(cc, "error", `Не вдалося завантажити історію: ${error.message}`);
+      }
+    }
+
+    // Кешування запитів
+    async function getHistory(cc) {
+      if (historyCache[cc]) return historyCache[cc];
+      if (loadingPromises[cc]) return loadingPromises[cc];
+
+      loadingPromises[cc] = fetchHistory(cc)
+        .then(result => {
+          historyCache[cc] = result;
+          return result;
+        })
+        .finally(() => {
+          delete loadingPromises[cc];
+        });
+
+      return loadingPromises[cc];
+    }
+
+    // 2. Паралельне викачування історії
+    async function fetchHistory(cc) {
+      const now = new Date();
+      const requests = [];
+
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, now.getDate());
+        const dateStr = formatDateYMD(d);
+        const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${dateStr}&json`;
+
+        requests.push(
+          fetch(url)
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.length > 0) {
+                return { date: d, rate: data[0].rate };
+              }
+              return null;
+            })
+            .catch(() => null) // Ігноруємо помилки мережі для окремих точок
+        );
+      }
+
+      const results = await Promise.all(requests);
+      return results.filter(item => item !== null).sort((a, b) => a.date - b.date);
+    }
+
+    function renderHistoryChart(cc, history) {
+      const wrap = document.getElementById(`chart-wrap-${cc}`);
+      const canvas = document.getElementById(`chart-${cc}`);
+      const ctx = canvas.getContext("2d");
+
+      const labels = history.map(point =>
+        point.date.toLocaleDateString("uk-UA", {
+          month: "short",
+          year: "2-digit"
+        })
+      );
+
+      const values = history.map(point => point.rate);
+
+      wrap.classList.add("ready");
+
+      chartInstances[cc] = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Курс",
+              data: values,
+              borderColor: "#22c55e",
+              backgroundColor: "rgba(34, 197, 94, 0.14)",
+              fill: true,
+              borderWidth: 2,
+              tension: 0.28,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: "#86efac",
+              pointBorderColor: "#22c55e",
+              pointBorderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(15, 23, 42, 0.96)",
+              titleColor: "#e5e7eb",
+              bodyColor: "#e5e7eb",
+              borderColor: "rgba(148, 163, 184, 0.22)",
+              borderWidth: 1,
+              callbacks: {
+                label: (context) => ` ${formatRate(context.parsed.y)} ₴`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#94a3b8", maxRotation: 0, autoSkip: true },
+              border: { color: "#243041" }
+            },
+            y: {
+              ticks: {
+                color: "#94a3b8",
+                callback: (value) => `${formatRate(value)} ₴`
+              },
+              grid: { color: "rgba(148, 163, 184, 0.08)" },
+              border: { color: "#243041" }
+            }
+          }
+        }
+      });
+    }
+
+    function showLoader(cc, visible) {
+      const el = document.getElementById(`loader-${cc}`);
+      if (el) el.style.display = visible ? "block" : "none";
+    }
+
+    function showMessage(cc, type, text) {
+      const el = document.getElementById(`${type}-${cc}`);
+      if (!el) return;
+      el.textContent = text;
+      el.style.display = "block";
+    }
+
+    function hideMessage(cc, type) {
+      const el = document.getElementById(`${type}-${cc}`);
+      if (!el) return;
+      el.style.display = "none";
+      el.textContent = "";
+    }
+
+    function formatDateYMD(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}${m}${d}`;
+    }
+
+    function formatRate(value) {
+      return Number(value).toLocaleString("uk-UA", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&")
+        .replaceAll("<", "<")
+        .replaceAll(">", ">")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    loadCurrentRates();
+
+    // Реєстрація Service Worker для перетворення у PWA (додаток на телефон)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('Помилка реєстрації Service Worker:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
