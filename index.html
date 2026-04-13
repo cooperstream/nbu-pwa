@@ -1,689 +1,674 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>НБУ Дашборд Валют</title>
-  
-  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0b1220">
-  <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #0b1220;
-      --panel: #111827;
-      --panel-2: #0f172a;
-      --panel-3: #1f2937;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --border: #243041;
-      --primary: #22c55e;
-      --primary-soft: rgba(34, 197, 94, 0.16);
-      --danger: #f87171;
-      --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-      --radius: 16px;
+      --bg: #0b1220; --panel: #111827; --panel-2: #0f172a;
+      --text: #e5e7eb; --muted: #94a3b8; --border: #243041;
+      --primary: #22c55e; --primary-soft: rgba(34,197,94,0.16);
+      --danger: #f87171; --shadow: 0 10px 30px rgba(0,0,0,0.28); --radius: 16px;
     }
-
-    * { box-sizing: border-box; }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background:
-        radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 30%),
-        linear-gradient(180deg, #09111d 0%, #0b1220 100%);
-      color: var(--text);
-      font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100%;
-      scrollbar-width: thin;
-      scrollbar-color: #2b3a55 #0b1220;
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{
+      background: radial-gradient(circle at top, rgba(34,197,94,0.08), transparent 30%),
+                  linear-gradient(180deg,#09111d 0%,#0b1220 100%);
+      color:var(--text);
+      font-family:Inter,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100%;
+      scrollbar-width:thin; scrollbar-color:#2b3a55 #0b1220;
     }
+    body{padding:16px;display:flex;justify-content:center}
+    .dashboard{width:100%;max-width:760px}
 
-    body {
-      padding: 16px;
-      display: flex;
-      justify-content: center;
+    .header{
+      background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
+      border:1px solid var(--border); border-radius:20px;
+      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:16px;
     }
-
-    .dashboard {
-      width: 100%;
-      max-width: 760px;
+    .header-top{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:44px;height:44px;border-radius:12px;flex:0 0 auto;
+      background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.06));
+      border:1px solid rgba(34,197,94,.22);
+      display:flex;align-items:center;justify-content:center;font-size:22px;
     }
-
-    .header {
-      background: linear-gradient(180deg, rgba(31, 41, 55, 0.96), rgba(17, 24, 39, 0.96));
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 18px 18px 14px;
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
+    .header-titles{flex:1 1 auto;min-width:0}
+    h1{font-size:22px;line-height:1.2;letter-spacing:.2px}
+    .subtitle{margin-top:2px;color:var(--muted);font-size:13px}
+    .header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+    .icon-btn{
+      width:36px;height:36px;border-radius:10px;
+      border:1px solid var(--border);background:rgba(255,255,255,.04);
+      color:var(--muted);display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:background .2s,color .2s,border-color .2s;padding:0;
     }
+    .icon-btn:hover{background:rgba(34,197,94,.1);color:var(--primary);border-color:rgba(34,197,94,.3)}
+    .icon-btn:focus-visible{outline:2px solid rgba(34,197,94,.6);outline-offset:2px}
+    .icon-btn:disabled{opacity:.5;cursor:not-allowed}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .icon-btn.spinning svg{animation:spin .75s linear infinite}
+    .last-updated{margin-top:10px;margin-left:56px;color:var(--muted);font-size:12px}
 
-    .header-top {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+    .grid{display:grid;gap:10px}
+
+    .item-wrapper{
+      background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));
+      border:1px solid var(--border); border-radius:var(--radius);
+      overflow:hidden; box-shadow:var(--shadow); transition:border-color .2s;
     }
-
-    .logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.06));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      border: 1px solid rgba(34, 197, 94, 0.22);
-      flex: 0 0 auto;
+    .item-wrapper:hover{border-color:rgba(34,197,94,.35)}
+    .item-wrapper.active{border-color:rgba(34,197,94,.45)}
+    .card{
+      width:100%;background:transparent;color:inherit;border:none;
+      padding:14px 16px;display:flex;align-items:center;
+      justify-content:space-between;gap:10px;cursor:pointer;text-align:left;
     }
-
-    h1 {
-      margin: 0;
-      font-size: 22px;
-      line-height: 1.2;
-      letter-spacing: 0.2px;
+    .card:focus-visible{outline:2px solid rgba(34,197,94,.6);outline-offset:-2px}
+    .currency-info{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}
+    .currency-badge{
+      width:46px;height:46px;border-radius:13px;flex:0 0 auto;
+      background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(255,255,255,.04));
+      border:1px solid rgba(34,197,94,.22);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:20px;line-height:1;
     }
-
-    .subtitle {
-      margin: 2px 0 0;
-      color: var(--muted);
-      font-size: 13px;
+    .currency-text{min-width:0}
+    .currency-code{font-weight:800;font-size:17px;line-height:1.1}
+    .currency-name{margin-top:3px;font-size:13px;color:var(--muted);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:none;
+      line-height:1.15}
+    .right-side{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+    .sparkline-col{display:flex;align-items:center;opacity:0;transition:opacity .5s;flex:0 0 auto}
+    .sparkline-col.ready{opacity:1}
+    .rate-box{
+      text-align:right;
+      min-width:calc(62px + 8px + 11ch);
     }
-
-    .last-updated {
-  margin-top: 8px;
-  margin-left: 56px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-    .grid {
-      display: grid;
-      gap: 10px;
-      margin-top: 12px;
+    .rate-row{
+      display:grid;
+      grid-template-columns:62px minmax(11ch, auto);
+      align-items:center;
+      justify-content:end;
+      column-gap:8px;
     }
-
-    .item-wrapper {
-      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      transition: border-color 0.2s ease, transform 0.2s ease;
+    .rate-value{
+      color:#dbe4ea;
+      font-size:19px;
+      font-weight:800;
+      line-height:1.1;
+      white-space:nowrap;
+      min-width:11ch;
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+      font-feature-settings:"tnum" 1;
     }
-
-    .item-wrapper:hover {
-      border-color: rgba(34, 197, 94, 0.35);
+    .delta{
+      width:62px;
+      font-size:11px;
+      font-weight:600;
+      padding:2px 5px;
+      border-radius:6px;
+      line-height:1.4;
+      white-space:nowrap;
+      text-align:center;
+      justify-self:end;
+      font-variant-numeric:tabular-nums;
+      font-feature-settings:"tnum" 1;
     }
-
-    .item-wrapper.active {
-      border-color: rgba(34, 197, 94, 0.45);
+    .delta.up  {color:#4ade80;background:rgba(34,197,94,.15)}
+    .delta.down{color:#f87171;background:rgba(248,113,113,.15)}
+    .delta.flat{color:var(--muted);background:rgba(148,163,184,.1)}
+    .delta.loading{color:transparent;background:rgba(148,163,184,.08);
+      min-width:0;animation:pulse 1.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+    .rate-note{margin-top:3px;font-size:12px;color:var(--muted);text-align:right}
+    .chevron{
+      width:18px;height:18px;color:var(--muted);flex:0 0 auto;
+      transition:transform .25s,color .25s;
     }
+    .item-wrapper.active .chevron{transform:rotate(180deg);color:#86efac}
 
-    .card {
-      width: 100%;
-      background: transparent;
-      color: inherit;
-      border: none;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      cursor: pointer;
-      text-align: left;
+    .details{max-height:0;overflow:hidden;transition:max-height .38s ease,opacity .25s;opacity:0}
+    .item-wrapper.active .details{max-height:600px;opacity:1;border-top:1px solid var(--border)}
+    .details-inner{padding:14px 16px 16px}
+    .period-tabs{display:flex;gap:6px;margin-bottom:14px}
+    .period-tab{
+      padding:5px 13px;border-radius:8px;border:1px solid var(--border);
+      background:transparent;color:var(--muted);font-size:12px;font-weight:600;
+      cursor:pointer;transition:background .15s,color .15s,border-color .15s;font-family:inherit;
     }
+    .period-tab:hover{color:var(--text);border-color:rgba(148,163,184,.4)}
+    .period-tab.active{background:var(--primary-soft);color:#86efac;border-color:rgba(34,197,94,.35)}
 
-    .card:focus-visible {
-      outline: 2px solid rgba(34, 197, 94, 0.6);
-      outline-offset: -2px;
+    .loader-text,.chart-error,.chart-empty{
+      color:var(--muted);font-size:13px;text-align:center;padding:24px 10px;
     }
+    .chart-error{color:var(--danger)}
+    .chart-wrap{position:relative;height:230px;display:none}
+    .chart-wrap.ready{display:block}
 
-    .currency-info {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      min-width: 0;
+    .loading-screen,.global-error{
+      padding:28px 16px;text-align:center;
+      background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));
+      border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
     }
+    .global-error{color:var(--danger)}
 
-    .currency-badge {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(255, 255, 255, 0.04));
-      border: 1px solid rgba(34, 197, 94, 0.22);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 22px;
-      letter-spacing: 0;
-      line-height: 1;
-      flex: 0 0 auto;
-    }
+    ::-webkit-scrollbar{width:10px}
+    ::-webkit-scrollbar-track{background:#0b1220}
+    ::-webkit-scrollbar-thumb{background:#2b3a55;border-radius:999px;border:2px solid #0b1220}
+    ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 
-    .currency-text {
-      min-width: 0;
-    }
-
-    .currency-code {
-      font-weight: 800;
-      font-size: 17px;
-      line-height: 1.1;
-    }
-
-    .currency-name {
-      margin-top: 3px;
-      font-size: 13px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .right-side {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 0 0 auto;
-    }
-
-    .rate-box {
-      text-align: right;
-    }
-
-    .rate-value {
-      color: #86efac;
-      font-size: 20px;
-      font-weight: 800;
-      line-height: 1.1;
-    }
-
-    .rate-note {
-      margin-top: 3px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .chevron {
-      width: 18px;
-      height: 18px;
-      color: var(--muted);
-      transition: transform 0.25s ease, color 0.25s ease;
-      flex: 0 0 auto;
-    }
-
-    .item-wrapper.active .chevron {
-      transform: rotate(180deg);
-      color: #86efac;
-    }
-
-    .details {
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
-      padding: 0 16px;
-      border-top: 0 solid transparent;
-    }
-
-    .item-wrapper.active .details {
-      max-height: 360px;
-      opacity: 1;
-      padding: 0 16px 16px;
-      border-top: 1px solid var(--border);
-    }
-
-    .details-inner {
-      padding-top: 14px;
-    }
-
-    .loader-text,
-    .chart-error,
-    .chart-empty {
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-      padding: 18px 10px;
-    }
-
-    .chart-error {
-      color: var(--danger);
-    }
-
-    .chart-wrap {
-      position: relative;
-      height: 240px;
-      margin-top: 4px;
-      display: none;
-    }
-
-    .chart-wrap.ready {
-      display: block;
-    }
-
-    .hint {
-      margin-top: 14px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .loading-screen,
-    .global-error {
-      padding: 28px 16px;
-      text-align: center;
-      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-
-    .global-error {
-      color: var(--danger);
-    }
-
-    @media (max-width: 560px) {
-      .card { padding: 14px; }
-
-      .currency-badge {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        font-size: 19px;
-      }
-
-      .rate-value { font-size: 18px; }
-      .currency-name { max-width: 150px; }
-      .chart-wrap { height: 170px; }
-      .item-wrapper.active .details { max-height: 290px; }
-    }
-
-    ::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0b1220;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #2b3a55;
-      border-radius: 999px;
-      border: 2px solid #0b1220;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #3b4d70;
+    @media(max-width:560px){
+      .card{padding:12px 14px;gap:8px}
+      .currency-info{gap:10px}
+      .currency-badge{width:42px;height:42px;border-radius:11px;font-size:18px}
+      .currency-code{font-size:16px}
+      .rate-value{font-size:16px;min-width:9.2ch}
+      .currency-name{font-size:12px}
+      .right-side{gap:8px}
+      .sparkline-col{display:none}
+      .rate-box{min-width:calc(52px + 4px + 9.2ch)}
+      .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
+      .delta{width:52px;font-size:10.5px;padding:2px 4px}
+      .rate-note{font-size:11.5px}
+      .chart-wrap{height:180px}
+      .item-wrapper.active .details{max-height:480px}
     }
   </style>
 </head>
 <body>
-  <div class="dashboard">
-    <div class="header">
-      <div class="header-top">
-        <div class="logo">₴</div>
-        <div>
-          <h1>Курси НБУ</h1>
-          <div class="subtitle">Поточний курс та динаміка за рік</div>
-        </div>
+<div class="dashboard">
+  <header class="header">
+    <div class="header-top">
+      <div class="logo" aria-hidden="true">₴</div>
+      <div class="header-titles">
+        <h1>Курси НБУ</h1>
+        <p class="subtitle">Поточний курс та динаміка</p>
       </div>
-      <div class="last-updated" id="last-updated">Завантаження...</div>
+      <div class="header-actions">
+        <button class="icon-btn" id="install-btn" title="Встановити додаток"
+                aria-label="Встановити додаток" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="refresh-btn" title="Оновити курси" aria-label="Оновити курси">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 4v6h-6"/>
+            <path d="M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+      </div>
     </div>
+    <div class="last-updated" id="last-updated" aria-live="polite">Завантаження…</div>
+  </header>
+  <div class="grid" id="rates-grid">
+    <div class="loading-screen">Завантаження даних НБУ…</div>
+  </div>
+</div>
 
-    <div class="grid" id="rates-grid">
-      <div class="loading-screen">Завантаження даних...</div>
-    </div>
+<script>
+"use strict";
 
-  <script>
-    const currencyMeta = {
-      USD: { name: "Долар США", symbol: "$" },
-      EUR: { name: "Євро", symbol: "€" },
-      PLN: { name: "Польський злотий", symbol: "zł" },
-      GBP: { name: "Фунт стерлінгів", symbol: "£" },
-      CHF: { name: "Швейцарський франк", symbol: "Fr" },
-      CAD: { name: "Канадський долар", symbol: "C$" },
-      JPY: { name: "Японська єна", symbol: "¥" },
-      CNY: { name: "Китайський юань", symbol: "¥" }
-    };
+// ─── Config ───────────────────────────────────────────────────────────────────
+const CURRENCY_META = {
+  USD:{name:"Долар США",         symbol:"$" },
+  EUR:{name:"Євро",              symbol:"€" },
+  PLN:{name:"Польський злотий",  symbol:"zł"},
+  GBP:{name:"Фунт стерлінгів",   symbol:"£" },
+  CHF:{name:"Швейцарський франк",symbol:"Fr"},
+  CAD:{name:"Канадський долар",  symbol:"C$"},
+  JPY:{name:"Японська єна",      symbol:"¥" },
+  CNY:{name:"Китайський юань",   symbol:"元"},
+};
+const CODES = Object.keys(CURRENCY_META);
+const PERIODS = {
+  "30d":{label:"30 дн",days:30},
+  "90d":{label:"90 дн",days:90},
+  "1y" :{label:"1 рік",days:365},
+};
+const TTL = {
+  today: 30*60*1000,
+  past:  24*60*60*1000,
+  h30:   20*60*1000,
+  h90:   60*60*1000,
+  h1y:   12*60*60*1000,
+};
 
-    const codes = Object.keys(currencyMeta);
-    const grid = document.getElementById("rates-grid");
-    const lastUpdated = document.getElementById("last-updated");
+// ─── State ────────────────────────────────────────────────────────────────────
+const chartInstances={}, activePeriod={}, memCache={};
 
-    const chartInstances = {};
-    const historyCache = {};
-    const loadingPromises = {};
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+const grid       = document.getElementById("rates-grid");
+const lastUpd    = document.getElementById("last-updated");
+const refreshBtn = document.getElementById("refresh-btn");
+const installBtn = document.getElementById("install-btn");
 
-    async function loadCurrentRates() {
-      try {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, "0");
-        const d = String(now.getDate()).padStart(2, "0");
-        const todayStr = `${y}${m}${d}`;
+// ─── Cache ────────────────────────────────────────────────────────────────────
+function cSet(k,v){
+  memCache[k]={v,t:Date.now()};
+  try{localStorage.setItem("nbu5_"+k,JSON.stringify({v,t:Date.now()}))}catch(e){}
+}
+function cGet(k,ttl){
+  const m=memCache[k];if(m&&Date.now()-m.t<=ttl)return m.v;
+  try{
+    const raw=localStorage.getItem("nbu5_"+k);if(!raw)return null;
+    const{v,t}=JSON.parse(raw);if(Date.now()-t>ttl)return null;
+    memCache[k]={v,t};return v;
+  }catch(e){return null}
+}
 
-        const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${todayStr}&json`;
-        const response = await fetch(url);
+// ─── Date utils ───────────────────────────────────────────────────────────────
+function fmtYMD(d){return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`}
+function fmtDMY(d){return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`}
+function pad(n){return String(n).padStart(2,"0")}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function daysInMonth(year,monthIndex){return new Date(year,monthIndex+1,0).getDate()}
+function sameCalendarDay(a,b){
+  return a.getFullYear()===b.getFullYear()
+    && a.getMonth()===b.getMonth()
+    && a.getDate()===b.getDate();
+}
+function buildHistorySampleDates(periodKey,end){
+  const endDate=new Date(end.getFullYear(),end.getMonth(),end.getDate());
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if(periodKey==="30d"){
+    const start=addDays(endDate,-30);
+    const dates=[];
+    for(let d=new Date(start);d<=endDate;d=addDays(d,1))dates.push(new Date(d));
+    return dates;
+  }
 
-        const data = await response.json();
+  if(periodKey==="90d"){
+    const start=addDays(endDate,-90);
+    const dates=[];
+    for(let d=new Date(start);d<=endDate;d=addDays(d,7))dates.push(new Date(d));
+    if(!dates.length||!sameCalendarDay(dates[dates.length-1],endDate))dates.push(new Date(endDate));
+    return dates;
+  }
 
-        const filtered = data
-          .filter(item => codes.includes(item.cc))
-          .map(item => ({
-            cc: item.cc,
-            txt: currencyMeta[item.cc]?.name || item.txt,
-            rate: item.rate,
-            date: item.exchangedate
-          }))
-          .sort((a, b) => codes.indexOf(a.cc) - codes.indexOf(b.cc));
+  const dates=[];
+  const anchorDay=endDate.getDate();
+  for(let i=11;i>=0;i--){
+    const base=new Date(endDate.getFullYear(),endDate.getMonth()-i,1);
+    const y=base.getFullYear();
+    const m=base.getMonth();
+    const d=Math.min(anchorDay,daysInMonth(y,m));
+    dates.push(new Date(y,m,d));
+  }
+  return dates;
+}
+function parseNBUDate(s){
+  if(!s)return new Date();
+  // "13.04.2025" або "2025-04-13"
+  if(s.includes("-")){return new Date(s)}
+  const[dd,mm,yyyy]=s.split(".");return new Date(+yyyy,+mm-1,+dd);
+}
 
-        if (!filtered.length) {
-          throw new Error("API не повернуло очікувані валюти");
-        }
+// ─── NBU direct fetch ─────────────────────────────────────────────────────────
+async function nbuFetch(url){
+  const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
+  if(!r.ok)throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
 
-        renderCards(filtered);
-        lastUpdated.textContent = `Дані на: ${filtered[0].date}`;
-      } catch (error) {
-        grid.innerHTML = `
-          <div class="global-error">
-            Не вдалося завантажити курси НБУ.<br>
-            <small>${escapeHtml(error.message)} (Можливо, немає доступу до Інтернету)</small>
+// ─── Get current rates ───────────────────────────────────────────────────────
+async function getCurrentRates(forceRefresh=false){
+  const today=fmtYMD(new Date());
+  if(!forceRefresh){
+    const c=cGet("rates_"+today,TTL.today);
+    if(c)return c;
+  }
+  const d=await nbuFetch(
+    `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${today}&json`
+  );
+  if(!d||!d.length)throw new Error("НБУ не повернуло поточні курси");
+  cSet("rates_"+today,d);
+  return d;
+}
+
+// ─── Get yesterday rates ──────────────────────────────────────────────────────
+async function getYesterdayRates(){
+  const yest=fmtYMD(addDays(new Date(),-1));
+  const c=cGet("rates_"+yest,TTL.past);if(c)return c;
+  try{
+    const d=await nbuFetch(
+      `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date=${yest}&json`
+    );
+    if(d&&d.length){cSet("rates_"+yest,d);return d}
+  }catch(e){}
+  return [];
+}
+
+// ─── Get history ──────────────────────────────────────────────────────────────
+async function getHistory(cc,periodKey){
+  const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
+  const cKey=`hist_${cc}_${periodKey}`;
+  const cached=cGet(cKey,ttlH);
+  if(cached)return cached.map(i=>({date:new Date(i.d),rate:i.r}));
+
+  const dates=buildHistorySampleDates(periodKey,new Date());
+
+  const requests=dates.map(async d=>{
+    const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
+    try{
+      const raw=await nbuFetch(url);
+      if(Array.isArray(raw)&&raw.length>0&&raw[0].rate){
+        return {date:d,rate:Number(raw[0].rate)};
+      }
+    }catch(e){}
+    return null;
+  });
+
+  const result=(await Promise.all(requests))
+    .filter(Boolean)
+    .sort((a,b)=>a.date-b.date);
+
+  cSet(cKey,result.map(i=>({d:i.date.getTime(),r:i.rate})));
+  return result;
+}
+
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+function buildSparkline(values,W=68,H=30){
+  if(!values||values.length<2)return"";
+  const min=Math.min(...values),max=Math.max(...values),rng=max-min||1;
+  const px=i=>((i/(values.length-1))*W).toFixed(1);
+  const py=v=>(H-2-((v-min)/rng)*(H-4)).toFixed(1);
+  const pts=values.map((v,i)=>`${px(i)},${py(v)}`).join(" ");
+  const area=`M 0,${H} `+values.map((v,i)=>`L ${px(i)},${py(v)}`).join(" ")+` L ${W},${H} Z`;
+  const col=values[values.length-1]>=values[0]?"#22c55e":"#f87171";
+  const gid="sg"+Math.random().toString(36).slice(2,8);
+  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" aria-hidden="true">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${col}" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#${gid})"/>
+    <polyline points="${pts}" stroke="${col}" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ─── Delta ────────────────────────────────────────────────────────────────────
+function buildDelta(today,prev){
+  if(prev==null)return`<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
+  const diff=today-prev,pct=(diff/prev)*100;
+  if(Math.abs(pct)<0.005)return`<span class="delta flat">±0%</span>`;
+  const cls=pct>0?"up":"down",arrow=pct>0?"↑":"↓";
+  return`<span class="delta ${cls}" title="${pct>0?"+":"−"}${Math.abs(diff).toFixed(2)} ₴">`
+    +`${arrow}${Math.abs(pct).toFixed(2)}%</span>`;
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function fmtRate(v){return Number(v).toLocaleString("uk-UA",{minimumFractionDigits:2,maximumFractionDigits:4})}
+function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function setMsg(cc,type,visible,text){
+  const el=document.getElementById(`${type}-${cc}`);
+  if(!el)return;el.style.display=visible?"block":"none";
+  if(visible&&text!=null)el.textContent=text;
+}
+
+// ─── Render cards ─────────────────────────────────────────────────────────────
+function renderCards(rates,prevMap){
+  grid.innerHTML="";
+  rates.forEach(item=>{
+    const meta=CURRENCY_META[item.cc]||{};
+    const units=item.units||1;
+    const w=document.createElement("section");
+    w.className="item-wrapper";w.id=`wrap-${item.cc}`;
+    w.innerHTML=`
+      <button class="card" type="button" aria-expanded="false" aria-controls="det-${item.cc}">
+        <div class="currency-info">
+          <div class="currency-badge" aria-hidden="true">${meta.symbol||item.cc}</div>
+          <div class="currency-text">
+            <div class="currency-code">${item.cc}</div>
+            <div class="currency-name">${meta.name||escHtml(item.txt)}</div>
           </div>
-        `;
-        lastUpdated.textContent = "Дані недоступні";
-      }
-    }
-
-    function renderCards(rates) {
-      grid.innerHTML = "";
-
-      rates.forEach(item => {
-        const wrapper = document.createElement("section");
-        wrapper.className = "item-wrapper";
-        wrapper.id = `wrap-${item.cc}`;
-
-        wrapper.innerHTML = `
-          <button class="card" type="button" aria-expanded="false" aria-controls="details-${item.cc}">
-            <div class="currency-info">
-              <div class="currency-badge">${currencyMeta[item.cc]?.symbol || item.cc}</div>
-              <div class="currency-text">
-                <div class="currency-code">${item.cc}</div>
-                <div class="currency-name">${item.txt}</div>
-              </div>
+        </div>
+        <div class="right-side">
+          <div class="sparkline-col" id="spark-${item.cc}"></div>
+          <div class="rate-box">
+            <div class="rate-row">
+              ${buildDelta(item.rate,prevMap[item.cc])}
+              <span class="rate-value">${fmtRate(item.rate)}&thinsp;₴</span>
             </div>
-
-            <div class="right-side">
-              <div class="rate-box">
-                <div class="rate-value">${formatRate(item.rate)} ₴</div>
-                <div class="rate-note">за 1 ${item.cc}</div>
-              </div>
-
-              <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </button>
-
-          <div class="details" id="details-${item.cc}">
-            <div class="details-inner">
-              <div class="loader-text" id="loader-${item.cc}" style="display:none;">Завантаження історії...</div>
-              <div class="chart-error" id="error-${item.cc}" style="display:none;"></div>
-              <div class="chart-empty" id="empty-${item.cc}" style="display:none;">Немає історичних даних.</div>
-              <div class="chart-wrap" id="chart-wrap-${item.cc}">
-                <canvas id="chart-${item.cc}"></canvas>
-              </div>
-            </div>
+            <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
           </div>
-        `;
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </button>
+      <div class="details" id="det-${item.cc}" role="region" aria-label="Деталі ${item.cc}">
+        <div class="details-inner">
+          <div class="period-tabs" role="group" aria-label="Обрати період">
+            ${Object.entries(PERIODS).map(([k,p])=>
+              `<button class="period-tab${k==="30d"?" active":""}"
+                       data-cc="${item.cc}" data-period="${k}">${p.label}</button>`
+            ).join("")}
+          </div>
+          <div class="loader-text" id="loader-${item.cc}" style="display:none">Завантаження…</div>
+          <div class="chart-error"  id="err-${item.cc}"   style="display:none"></div>
+          <div class="chart-empty"  id="empty-${item.cc}" style="display:none">Немає даних.</div>
+          <div class="chart-wrap"   id="cwrap-${item.cc}">
+            <canvas id="chart-${item.cc}"></canvas>
+          </div>
+        </div>
+      </div>`;
+    w.querySelector(".card").addEventListener("click",()=>toggleCard(item.cc));
+    w.querySelectorAll(".period-tab").forEach(btn=>
+      btn.addEventListener("click",e=>{e.stopPropagation();switchPeriod(item.cc,btn.dataset.period)})
+    );
+    grid.appendChild(w);
+  });
+}
 
-        const button = wrapper.querySelector(".card");
-        button.addEventListener("click", () => handleCardClick(item.cc));
+// ─── Card toggle ──────────────────────────────────────────────────────────────
+async function toggleCard(cc){
+  const w=document.getElementById(`wrap-${cc}`);
+  const btn=w.querySelector(".card");
+  const wasOpen=w.classList.contains("active");
+  document.querySelectorAll(".item-wrapper.active").forEach(el=>{
+    if(el===w)return;
+    el.classList.remove("active");
+    el.querySelector(".card")?.setAttribute("aria-expanded","false");
+  });
+  if(wasOpen){w.classList.remove("active");btn.setAttribute("aria-expanded","false");return}
+  w.classList.add("active");btn.setAttribute("aria-expanded","true");
+  if(!chartInstances[cc])await loadChart(cc,activePeriod[cc]||"30d");
+  else chartInstances[cc].resize();
+}
 
-        grid.appendChild(wrapper);
-      });
-    }
+// ─── Period switch ────────────────────────────────────────────────────────────
+async function switchPeriod(cc,pKey){
+  if(activePeriod[cc]===pKey&&chartInstances[cc])return;
+  activePeriod[cc]=pKey;
+  document.getElementById(`wrap-${cc}`)?.querySelectorAll(".period-tab")
+    .forEach(b=>b.classList.toggle("active",b.dataset.period===pKey));
+  if(chartInstances[cc]){chartInstances[cc].destroy();delete chartInstances[cc]}
+  document.getElementById(`cwrap-${cc}`)?.classList.remove("ready");
+  await loadChart(cc,pKey);
+}
 
-    async function handleCardClick(cc) {
-      const wrapper = document.getElementById(`wrap-${cc}`);
-      const button = wrapper.querySelector(".card");
-      const isActive = wrapper.classList.contains("active");
+// ─── Load chart ───────────────────────────────────────────────────────────────
+async function loadChart(cc,pKey){
+  activePeriod[cc]=pKey;
+  setMsg(cc,"loader",true);setMsg(cc,"err",false);setMsg(cc,"empty",false);
+  try{
+    const history=await getHistory(cc,pKey);
+    if(!document.getElementById(`wrap-${cc}`)?.classList.contains("active"))return;
+    setMsg(cc,"loader",false);
+    if(!history.length){setMsg(cc,"empty",true,"Немає даних за цей період.");return}
+    renderChart(cc,history,pKey);
+  }catch(err){
+    setMsg(cc,"loader",false);
+    setMsg(cc,"err",true,`Помилка: ${escHtml(err.message)}`);
+  }
+}
 
-      document.querySelectorAll(".item-wrapper.active").forEach(el => {
-        if (el !== wrapper) {
-          el.classList.remove("active");
-          const btn = el.querySelector(".card");
-          if (btn) btn.setAttribute("aria-expanded", "false");
+// ─── Render chart ─────────────────────────────────────────────────────────────
+function renderChart(cc,history,pKey){
+  const cwrap=document.getElementById(`cwrap-${cc}`);
+  const canvas=document.getElementById(`chart-${cc}`);
+  if(!cwrap||!canvas)return;
+
+  const data=history;
+  const locOpts=pKey==="1y"
+    ? {month:"short",year:"2-digit"}
+    : {day:"numeric",month:"short"};
+  const labels=data.map(p=>p.date.toLocaleDateString("uk-UA",locOpts));
+  const values=data.map(p=>p.rate);
+  cwrap.classList.add("ready");
+
+  const is30d=pKey==="30d";
+  const is90d=pKey==="90d";
+  const is1y=pKey==="1y";
+
+  chartInstances[cc]=new Chart(canvas.getContext("2d"),{
+    type:"line",
+    data:{labels,datasets:[{
+      label:"Курс",
+      data:values,
+      borderColor:"#22c55e",
+      backgroundColor:"rgba(34,197,94,.11)",
+      fill:true,
+      borderWidth:is30d?2.1:2.3,
+      cubicInterpolationMode:is30d?"default":"monotone",
+      tension:is30d?0.42:0,
+      spanGaps:true,
+      pointRadius:is30d?2:0,
+      pointHoverRadius:is30d?4:5,
+      pointHitRadius:is30d?14:18,
+      pointBackgroundColor:"#86efac",
+      pointBorderColor:"#22c55e",
+      pointBorderWidth:1,
+    }]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:"index",intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:"rgba(15,23,42,.96)",
+          titleColor:"#e5e7eb",
+          bodyColor:"#e5e7eb",
+          borderColor:"rgba(148,163,184,.22)",
+          borderWidth:1,
+          callbacks:{label:ctx=>` ${fmtRate(ctx.parsed.y)} ₴`}
         }
-      });
-
-      if (isActive) {
-        wrapper.classList.remove("active");
-        button.setAttribute("aria-expanded", "false");
-        return;
-      }
-
-      wrapper.classList.add("active");
-      button.setAttribute("aria-expanded", "true");
-
-      if (chartInstances[cc]) {
-        chartInstances[cc].resize();
-        return;
-      }
-
-      try {
-        showLoader(cc, true);
-        hideMessage(cc, "error");
-        hideMessage(cc, "empty");
-
-        const history = await getHistory(cc);
-        showLoader(cc, false);
-
-        if (!history.length) {
-          showMessage(cc, "empty", "Немає історичних даних.");
-          return;
-        }
-
-        renderHistoryChart(cc, history);
-      } catch (error) {
-        showLoader(cc, false);
-        showMessage(cc, "error", `Не вдалося завантажити історію: ${error.message}`);
-      }
-    }
-
-    async function getHistory(cc) {
-      if (historyCache[cc]) return historyCache[cc];
-      if (loadingPromises[cc]) return loadingPromises[cc];
-
-      loadingPromises[cc] = fetchHistory(cc)
-        .then(result => {
-          historyCache[cc] = result;
-          return result;
-        })
-        .finally(() => {
-          delete loadingPromises[cc];
-        });
-
-      return loadingPromises[cc];
-    }
-
-    async function fetchHistory(cc) {
-      const now = new Date();
-      const requests = [];
-
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, now.getDate());
-        const dateStr = formatDateYMD(d);
-        const url = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${dateStr}&json`;
-
-        requests.push(
-          fetch(url)
-            .then(r => r.json())
-            .then(data => {
-              if (data && data.length > 0) {
-                return { date: d, rate: data[0].rate };
-              }
-              return null;
-            })
-            .catch(() => null)
-        );
-      }
-
-      const results = await Promise.all(requests);
-      return results.filter(item => item !== null).sort((a, b) => a.date - b.date);
-    }
-
-    function renderHistoryChart(cc, history) {
-      const wrap = document.getElementById(`chart-wrap-${cc}`);
-      const canvas = document.getElementById(`chart-${cc}`);
-      const ctx = canvas.getContext("2d");
-
-      const labels = history.map(point =>
-        point.date.toLocaleDateString("uk-UA", {
-          month: "short",
-          year: "2-digit"
-        })
-      );
-
-      const values = history.map(point => point.rate);
-
-      wrap.classList.add("ready");
-
-      chartInstances[cc] = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Курс",
-              data: values,
-              borderColor: "#22c55e",
-              backgroundColor: "rgba(34, 197, 94, 0.14)",
-              fill: true,
-              borderWidth: 2,
-              tension: 0.28,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              pointBackgroundColor: "#86efac",
-              pointBorderColor: "#22c55e",
-              pointBorderWidth: 1
-            }
-          ]
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{
+            color:"#94a3b8",
+            maxRotation:0,
+            autoSkip:true,
+            maxTicksLimit:is1y?6:(is90d?7:8)
+          },
+          border:{color:"#243041"}
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: "index",
-            intersect: false
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: "rgba(15, 23, 42, 0.96)",
-              titleColor: "#e5e7eb",
-              bodyColor: "#e5e7eb",
-              borderColor: "rgba(148, 163, 184, 0.22)",
-              borderWidth: 1,
-              callbacks: {
-                label: (context) => ` ${formatRate(context.parsed.y)} ₴`
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: "#94a3b8", maxRotation: 0, autoSkip: true },
-              border: { color: "#243041" }
-            },
-            y: {
-              ticks: {
-                color: "#94a3b8",
-                callback: (value) => `${formatRate(value)} ₴`
-              },
-              grid: { color: "rgba(148, 163, 184, 0.08)" },
-              border: { color: "#243041" }
-            }
-          }
+        y:{
+          ticks:{color:"#94a3b8",callback:v=>`${fmtRate(v)} ₴`},
+          grid:{color:"rgba(148,163,184,.07)"},
+          border:{color:"#243041"}
         }
-      });
+      }
     }
+  });
+}
 
-    function showLoader(cc, visible) {
-      const el = document.getElementById(`loader-${cc}`);
-      if (el) el.style.display = visible ? "block" : "none";
-    }
+// ─── Sparklines (фон) ─────────────────────────────────────────────────────────
+function prefetchSparklines(){
+  if(window.matchMedia("(max-width: 560px)").matches)return;
+  CODES.forEach(async cc=>{
+    try{
+      const h=await getHistory(cc,"30d");
+      if(h.length<2)return;
+      const el=document.getElementById(`spark-${cc}`);
+      if(!el)return;
+      el.innerHTML=buildSparkline(h.map(p=>p.rate));
+      el.classList.add("ready");
+    }catch(e){}
+  });
+}
 
-    function showMessage(cc, type, text) {
-      const el = document.getElementById(`${type}-${cc}`);
-      if (!el) return;
-      el.textContent = text;
-      el.style.display = "block";
-    }
+// ─── Main loader ──────────────────────────────────────────────────────────────
+async function loadDashboard(forceRefresh=false){
+  refreshBtn.classList.add("spinning");refreshBtn.disabled=true;
+  try{
+    const[curRes,yestRes]=await Promise.allSettled([
+      getCurrentRates(forceRefresh),
+      getYesterdayRates()
+    ]);
+    let current=(curRes.status==="fulfilled"?curRes.value:[])
+      .filter(i=>CODES.includes(i.cc));
+    if(!current.length)throw new Error("Дані НБУ недоступні");
+    current.sort((a,b)=>CODES.indexOf(a.cc)-CODES.indexOf(b.cc));
 
-    function hideMessage(cc, type) {
-      const el = document.getElementById(`${type}-${cc}`);
-      if (!el) return;
-      el.style.display = "none";
-      el.textContent = "";
-    }
+    const prevMap={};
+    if(yestRes.status==="fulfilled")
+      yestRes.value.forEach(i=>{prevMap[i.cc]=i.rate});
 
-    function formatDateYMD(date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      return `${y}${m}${d}`;
-    }
+    Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}});
+    Object.keys(chartInstances).forEach(k=>delete chartInstances[k]);
+    Object.keys(activePeriod).forEach(k=>delete activePeriod[k]);
 
-    function formatRate(value) {
-      return Number(value).toLocaleString("uk-UA", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 4
-      });
-    }
+    renderCards(current,prevMap);
 
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+    const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
+    lastUpd.textContent=`Дані на: ${current[0]?.exchangedate||"—"} · оновлено о ${t}`;
+    localStorage.setItem("nbu5_last_fetch",Date.now().toString());
+    prefetchSparklines();
+  }catch(err){
+    grid.innerHTML=`<div class="global-error">
+      Не вдалося завантажити курси НБУ.<br>
+      <small>${escHtml(err.message)}</small>
+    </div>`;
+    lastUpd.textContent="Дані недоступні";
+  }finally{
+    refreshBtn.classList.remove("spinning");refreshBtn.disabled=false;
+  }
+}
 
-    loadCurrentRates();
+// ─── Events ───────────────────────────────────────────────────────────────────
+refreshBtn.addEventListener("click",()=>loadDashboard(true));
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)return;
+  const last=parseInt(localStorage.getItem("nbu5_last_fetch")||"0");
+  if(Date.now()-last>30*60*1000)loadDashboard(false);
+});
 
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", async () => {
-        try {
-          const registration = await navigator.serviceWorker.register("./sw.js");
-          console.log("Service Worker зареєстровано:", registration.scope);
-        } catch (err) {
-          console.log("Помилка реєстрації Service Worker:", err);
-        }
-      });
-    }
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();deferredPrompt=e;installBtn.style.display="flex";
+});
+installBtn.addEventListener("click",async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==="accepted")installBtn.style.display="none";
+  deferredPrompt=null;
+});
+window.addEventListener("appinstalled",()=>{deferredPrompt=null;installBtn.style.display="none"});
+if("serviceWorker" in navigator)
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 
-    let deferredPrompt = null;
-
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      console.log("PWA installable", e);
-    });
-
-    window.addEventListener("appinstalled", () => {
-      deferredPrompt = null;
-      console.log("PWA встановлено");
-    });
-  </script>
+loadDashboard();
+</script>
 </body>
 </html>
