@@ -29,7 +29,7 @@
     .header{
       background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
       border:1px solid var(--border); border-radius:20px;
-      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(24px, 2vh, 22px);
+      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(14px, 2vh, 20px);
     }
     .header-top{display:flex;align-items:center;gap:12px}
     .logo{
@@ -55,7 +55,7 @@
     .icon-btn.spinning svg{animation:spin .75s linear infinite}
     .last-updated{margin-top:10px;margin-left:56px;color:var(--muted);font-size:12px}
 
-    .grid{display:grid;gap:clamp(12px, 1.4vh, 14px)}
+    .grid{display:grid;gap:clamp(14px, 1.6vh, 16px)}
 
     .item-wrapper{
       background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));
@@ -179,7 +179,7 @@
       .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
       .delta{width:52px;font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
-      .grid{gap:8px}
+      .grid{gap:10px}
       .chart-wrap{height:180px}
       .item-wrapper.active .details{max-height:480px}
     }
@@ -551,9 +551,9 @@ function renderChart(cc,history,pKey){
       cubicInterpolationMode:is30d?"default":"monotone",
       tension:is30d?0.42:0,
       spanGaps:true,
-      pointRadius:is30d?2:0,
-      pointHoverRadius:is30d?4:5,
-      pointHitRadius:is30d?14:18,
+      pointRadius:2,
+      pointHoverRadius:4,
+      pointHitRadius:14,
       pointBackgroundColor:"#86efac",
       pointBorderColor:"#22c55e",
       pointBorderWidth:1,
