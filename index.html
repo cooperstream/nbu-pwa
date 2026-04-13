@@ -192,6 +192,11 @@
       .chart-wrap{height:180px}
       .item-wrapper.active .details{max-height:480px}
     }
+
+    @media (max-height: 560px) and (orientation: landscape){
+      .chart-wrap{height:140px}
+      .item-wrapper.active .details{max-height:560px}
+    }
   </style>
 </head>
 <body>
@@ -233,7 +238,6 @@
 <script>
 "use strict";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
 const CURRENCY_META = {
   USD:{name:"Долар США",         symbol:"$" },
   EUR:{name:"Євро",              symbol:"€" },
@@ -258,16 +262,13 @@ const TTL = {
   h1y:   12*60*60*1000,
 };
 
-// ─── State ────────────────────────────────────────────────────────────────────
 const chartInstances={}, activePeriod={}, memCache={}, chartRequestTokens={};
 
-// ─── DOM ──────────────────────────────────────────────────────────────────────
 const grid       = document.getElementById("rates-grid");
 const lastUpd    = document.getElementById("last-updated");
 const refreshBtn = document.getElementById("refresh-btn");
 const installBtn = document.getElementById("install-btn");
 
-// ─── Cache ────────────────────────────────────────────────────────────────────
 function cSet(k,v){
   memCache[k]={v,t:Date.now()};
   try{localStorage.setItem("nbu5_"+k,JSON.stringify({v,t:Date.now()}))}catch(e){}
@@ -281,7 +282,6 @@ function cGet(k,ttl){
   }catch(e){return null}
 }
 
-// ─── Date utils ───────────────────────────────────────────────────────────────
 function fmtYMD(d){return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`}
 function fmtDMY(d){return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`}
 function pad(n){return String(n).padStart(2,"0")}
@@ -321,21 +321,13 @@ function buildHistorySampleDates(periodKey,end){
   }
   return dates;
 }
-function parseNBUDate(s){
-  if(!s)return new Date();
-  // "13.04.2025" або "2025-04-13"
-  if(s.includes("-")){return new Date(s)}
-  const[dd,mm,yyyy]=s.split(".");return new Date(+yyyy,+mm-1,+dd);
-}
 
-// ─── NBU direct fetch ─────────────────────────────────────────────────────────
 async function nbuFetch(url){
   const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
   if(!r.ok)throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
-// ─── Get current rates ───────────────────────────────────────────────────────
 async function getCurrentRates(forceRefresh=false){
   const today=fmtYMD(new Date());
   if(!forceRefresh){
@@ -350,7 +342,6 @@ async function getCurrentRates(forceRefresh=false){
   return d;
 }
 
-// ─── Get yesterday rates ──────────────────────────────────────────────────────
 async function getYesterdayRates(){
   const yest=fmtYMD(addDays(new Date(),-1));
   const c=cGet("rates_"+yest,TTL.past);if(c)return c;
@@ -363,7 +354,6 @@ async function getYesterdayRates(){
   return [];
 }
 
-// ─── Get history ──────────────────────────────────────────────────────────────
 async function getHistory(cc,periodKey){
   const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
   const cKey=`hist_${cc}_${periodKey}`;
@@ -391,7 +381,6 @@ async function getHistory(cc,periodKey){
   return result;
 }
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
 function buildSparkline(values,W=68,H=30){
   if(!values||values.length<2)return"";
   const min=Math.min(...values),max=Math.max(...values),rng=max-min||1;
@@ -412,7 +401,6 @@ function buildSparkline(values,W=68,H=30){
   </svg>`;
 }
 
-// ─── Delta ────────────────────────────────────────────────────────────────────
 function buildDelta(today,prev){
   if(prev==null)return`<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
   const diff=today-prev,pct=(diff/prev)*100;
@@ -422,7 +410,6 @@ function buildDelta(today,prev){
     +`${arrow}${Math.abs(pct).toFixed(2)}%</span>`;
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
 function fmtRate(v){return Number(v).toLocaleString("uk-UA",{minimumFractionDigits:2,maximumFractionDigits:4})}
 function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function setMsg(cc,type,visible,text){
@@ -431,7 +418,31 @@ function setMsg(cc,type,visible,text){
   if(visible&&text!=null)el.textContent=text;
 }
 
-// ─── Render cards ─────────────────────────────────────────────────────────────
+function ensureCardFullyVisible(cc, smooth = true){
+  const wrap = document.getElementById(`wrap-${cc}`);
+  if(!wrap) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const topPad = 10;
+  const bottomPad = 12;
+
+  if(rect.bottom > window.innerHeight - bottomPad){
+    window.scrollBy({
+      top: rect.bottom - window.innerHeight + bottomPad,
+      behavior: smooth ? "smooth" : "auto"
+    });
+  } else if(rect.top < topPad){
+    window.scrollBy({
+      top: rect.top - topPad,
+      behavior: smooth ? "smooth" : "auto"
+    });
+  }
+}
+
+function scheduleEnsureCardVisible(cc, delay = 0){
+  window.setTimeout(() => ensureCardFullyVisible(cc), delay);
+}
+
 function renderCards(rates,prevMap){
   grid.innerHTML="";
   rates.forEach(item=>{
@@ -487,34 +498,54 @@ function renderCards(rates,prevMap){
   });
 }
 
-// ─── Card toggle ──────────────────────────────────────────────────────────────
 async function toggleCard(cc){
   const w=document.getElementById(`wrap-${cc}`);
   const btn=w.querySelector(".card");
   const wasOpen=w.classList.contains("active");
+
   document.querySelectorAll(".item-wrapper.active").forEach(el=>{
     if(el===w)return;
     el.classList.remove("active");
     el.querySelector(".card")?.setAttribute("aria-expanded","false");
   });
-  if(wasOpen){w.classList.remove("active");btn.setAttribute("aria-expanded","false");return}
-  w.classList.add("active");btn.setAttribute("aria-expanded","true");
-  if(!chartInstances[cc])await loadChart(cc,activePeriod[cc]||"30d");
-  else chartInstances[cc].resize();
+
+  if(wasOpen){
+    w.classList.remove("active");
+    btn.setAttribute("aria-expanded","false");
+    return;
+  }
+
+  w.classList.add("active");
+  btn.setAttribute("aria-expanded","true");
+
+  scheduleEnsureCardVisible(cc, 60);
+
+  if(!chartInstances[cc]){
+    await loadChart(cc,activePeriod[cc]||"30d");
+    scheduleEnsureCardVisible(cc, 220);
+  } else {
+    chartInstances[cc].resize();
+    scheduleEnsureCardVisible(cc, 120);
+  }
 }
 
-// ─── Period switch ────────────────────────────────────────────────────────────
 async function switchPeriod(cc,pKey){
   if(activePeriod[cc]===pKey&&chartInstances[cc])return;
   activePeriod[cc]=pKey;
+
   document.getElementById(`wrap-${cc}`)?.querySelectorAll(".period-tab")
     .forEach(b=>b.classList.toggle("active",b.dataset.period===pKey));
-  if(chartInstances[cc]){chartInstances[cc].destroy();delete chartInstances[cc]}
+
+  if(chartInstances[cc]){
+    chartInstances[cc].destroy();
+    delete chartInstances[cc];
+  }
+
   document.getElementById(`cwrap-${cc}`)?.classList.remove("ready");
   await loadChart(cc,pKey);
+  scheduleEnsureCardVisible(cc, 220);
 }
 
-// ─── Load chart ───────────────────────────────────────────────────────────────
 async function loadChart(cc,pKey){
   activePeriod[cc]=pKey;
   const requestToken = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
@@ -538,7 +569,6 @@ async function loadChart(cc,pKey){
   }
 }
 
-// ─── Render chart ─────────────────────────────────────────────────────────────
 function renderChart(cc,history,pKey){
   const cwrap=document.getElementById(`cwrap-${cc}`);
   const canvas=document.getElementById(`chart-${cc}`);
@@ -619,9 +649,13 @@ function renderChart(cc,history,pKey){
       }
     }
   });
+
+  requestAnimationFrame(() => {
+    chartInstances[cc]?.resize();
+    scheduleEnsureCardVisible(cc, 80);
+  });
 }
 
-// ─── Sparklines (фон) ─────────────────────────────────────────────────────────
 function prefetchSparklines(){
   if(window.matchMedia("(max-width: 560px)").matches)return;
   CODES.forEach(async cc=>{
@@ -636,7 +670,6 @@ function prefetchSparklines(){
   });
 }
 
-// ─── Main loader ──────────────────────────────────────────────────────────────
 async function loadDashboard(forceRefresh=false){
   refreshBtn.classList.add("spinning");refreshBtn.disabled=true;
   try{
@@ -674,7 +707,6 @@ async function loadDashboard(forceRefresh=false){
   }
 }
 
-// ─── Events ───────────────────────────────────────────────────────────────────
 refreshBtn.addEventListener("click",()=>loadDashboard(true));
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden)return;
@@ -696,6 +728,20 @@ installBtn.addEventListener("click",async()=>{
 window.addEventListener("appinstalled",()=>{deferredPrompt=null;installBtn.style.display="none"});
 if("serviceWorker" in navigator)
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+
+window.addEventListener("resize", () => {
+  const active = document.querySelector(".item-wrapper.active");
+  if(!active) return;
+  const cc = active.id.replace("wrap-", "");
+  scheduleEnsureCardVisible(cc, 80);
+});
+
+window.addEventListener("orientationchange", () => {
+  const active = document.querySelector(".item-wrapper.active");
+  if(!active) return;
+  const cc = active.id.replace("wrap-", "");
+  scheduleEnsureCardVisible(cc, 250);
+});
 
 loadDashboard();
 </script>
