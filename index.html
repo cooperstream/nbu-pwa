@@ -24,7 +24,7 @@
       scrollbar-width:thin; scrollbar-color:#2b3a55 #0b1220;
     }
     body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:flex;justify-content:center}
-    .dashboard{width:100%;max-width:760px;min-height:calc(100dvh - 32px)}
+    .dashboard{width:100%;max-width:760px}
 
     .header{
       background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
@@ -166,8 +166,8 @@
     ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 
     @media(max-width:560px){
-      .header{padding:20px 18px 16px}
-      .card{padding:15px 14px;gap:8px}
+      .header{padding:18px 18px 14px;margin-bottom:12px}
+      .card{padding:14px 14px;gap:8px}
       .currency-info{gap:10px}
       .currency-badge{width:44px;height:44px;border-radius:11px;font-size:18px}
       .currency-code{font-size:16px}
@@ -179,7 +179,7 @@
       .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
       .delta{width:52px;font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
-      .grid{gap:12px}
+      .grid{gap:8px}
       .chart-wrap{height:180px}
       .item-wrapper.active .details{max-height:480px}
     }
