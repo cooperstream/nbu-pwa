@@ -29,7 +29,7 @@
     .header{
       background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
       border:1px solid var(--border); border-radius:20px;
-      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(14px, 2vh, 20px);
+      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(24px, 2vh, 22px);
     }
     .header-top{display:flex;align-items:center;gap:12px}
     .logo{
@@ -55,7 +55,7 @@
     .icon-btn.spinning svg{animation:spin .75s linear infinite}
     .last-updated{margin-top:10px;margin-left:56px;color:var(--muted);font-size:12px}
 
-    .grid{display:grid;gap:clamp(14px, 1.6vh, 16px)}
+    .grid{display:grid;gap:clamp(12px, 1.4vh, 14px)}
 
     .item-wrapper{
       background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));
@@ -179,7 +179,7 @@
       .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
       .delta{width:52px;font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
-      .grid{gap:10px}
+      .grid{gap:8px}
       .chart-wrap{height:180px}
       .item-wrapper.active .details{max-height:480px}
     }
@@ -250,7 +250,7 @@ const TTL = {
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────
-const chartInstances={}, activePeriod={}, memCache={};
+const chartInstances={}, activePeriod={}, memCache={}, chartRequestTokens={};
 
 // ─── DOM ──────────────────────────────────────────────────────────────────────
 const grid       = document.getElementById("rates-grid");
@@ -508,14 +508,22 @@ async function switchPeriod(cc,pKey){
 // ─── Load chart ───────────────────────────────────────────────────────────────
 async function loadChart(cc,pKey){
   activePeriod[cc]=pKey;
+  const requestToken = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+  chartRequestTokens[cc] = requestToken;
+
   setMsg(cc,"loader",true);setMsg(cc,"err",false);setMsg(cc,"empty",false);
   try{
     const history=await getHistory(cc,pKey);
-    if(!document.getElementById(`wrap-${cc}`)?.classList.contains("active"))return;
+
+    if(chartRequestTokens[cc] !== requestToken) return;
+    if(activePeriod[cc] !== pKey) return;
+    if(!document.getElementById(`wrap-${cc}`)?.classList.contains("active")) return;
+
     setMsg(cc,"loader",false);
     if(!history.length){setMsg(cc,"empty",true,"Немає даних за цей період.");return}
     renderChart(cc,history,pKey);
   }catch(err){
+    if(chartRequestTokens[cc] !== requestToken) return;
     setMsg(cc,"loader",false);
     setMsg(cc,"err",true,`Помилка: ${escHtml(err.message)}`);
   }
@@ -526,6 +534,16 @@ function renderChart(cc,history,pKey){
   const cwrap=document.getElementById(`cwrap-${cc}`);
   const canvas=document.getElementById(`chart-${cc}`);
   if(!cwrap||!canvas)return;
+
+  if(chartInstances[cc]){
+    try{chartInstances[cc].destroy()}catch(e){}
+    delete chartInstances[cc];
+  }
+
+  const existingChart = typeof Chart.getChart === "function" ? Chart.getChart(canvas) : null;
+  if(existingChart){
+    try{existingChart.destroy()}catch(e){}
+  }
 
   const data=history;
   const locOpts=pKey==="1y"
@@ -551,9 +569,9 @@ function renderChart(cc,history,pKey){
       cubicInterpolationMode:is30d?"default":"monotone",
       tension:is30d?0.42:0,
       spanGaps:true,
-      pointRadius:2,
-      pointHoverRadius:4,
-      pointHitRadius:14,
+      pointRadius:is30d?2:0,
+      pointHoverRadius:is30d?4:5,
+      pointHitRadius:is30d?14:18,
       pointBackgroundColor:"#86efac",
       pointBorderColor:"#22c55e",
       pointBorderWidth:1,
