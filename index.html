@@ -23,13 +23,13 @@
       min-height:100%;
       scrollbar-width:thin; scrollbar-color:#2b3a55 #0b1220;
     }
-    body{padding:16px;display:flex;justify-content:center}
-    .dashboard{width:100%;max-width:760px}
+    body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:flex;justify-content:center}
+    .dashboard{width:100%;max-width:760px;min-height:calc(100dvh - 32px)}
 
     .header{
       background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
       border:1px solid var(--border); border-radius:20px;
-      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:16px;
+      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(16px, 2vh, 22px);
     }
     .header-top{display:flex;align-items:center;gap:12px}
     .logo{
@@ -55,7 +55,7 @@
     .icon-btn.spinning svg{animation:spin .75s linear infinite}
     .last-updated{margin-top:10px;margin-left:56px;color:var(--muted);font-size:12px}
 
-    .grid{display:grid;gap:10px}
+    .grid{display:grid;gap:clamp(10px, 1.4vh, 14px)}
 
     .item-wrapper{
       background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));
@@ -66,7 +66,7 @@
     .item-wrapper.active{border-color:rgba(34,197,94,.45)}
     .card{
       width:100%;background:transparent;color:inherit;border:none;
-      padding:14px 16px;display:flex;align-items:center;
+      padding:clamp(14px, 1.8vh, 18px) 16px;display:flex;align-items:center;
       justify-content:space-between;gap:10px;cursor:pointer;text-align:left;
     }
     .card:focus-visible{outline:2px solid rgba(34,197,94,.6);outline-offset:-2px}
@@ -166,9 +166,10 @@
     ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 
     @media(max-width:560px){
-      .card{padding:12px 14px;gap:8px}
+      .header{padding:20px 18px 16px}
+      .card{padding:15px 14px;gap:8px}
       .currency-info{gap:10px}
-      .currency-badge{width:42px;height:42px;border-radius:11px;font-size:18px}
+      .currency-badge{width:44px;height:44px;border-radius:11px;font-size:18px}
       .currency-code{font-size:16px}
       .rate-value{font-size:16px;min-width:9.2ch}
       .currency-name{font-size:12px}
@@ -178,6 +179,7 @@
       .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
       .delta{width:52px;font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
+      .grid{gap:12px}
       .chart-wrap{height:180px}
       .item-wrapper.active .details{max-height:480px}
     }
