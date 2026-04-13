@@ -29,7 +29,7 @@
     .header{
       background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));
       border:1px solid var(--border); border-radius:20px;
-      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(24px, 2vh, 22px);
+      padding:18px 18px 14px; box-shadow:var(--shadow); margin-bottom:clamp(18px, 2.4vh, 26px);
     }
     .header-top{display:flex;align-items:center;gap:12px}
     .logo{
@@ -569,9 +569,9 @@ function renderChart(cc,history,pKey){
       cubicInterpolationMode:is30d?"default":"monotone",
       tension:is30d?0.42:0,
       spanGaps:true,
-      pointRadius:is30d?2:0,
-      pointHoverRadius:is30d?4:5,
-      pointHitRadius:is30d?14:18,
+      pointRadius:2,
+      pointHoverRadius:4,
+      pointHitRadius:14,
       pointBackgroundColor:"#86efac",
       pointBorderColor:"#22c55e",
       pointBorderWidth:1,
