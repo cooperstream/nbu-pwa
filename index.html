@@ -102,7 +102,7 @@
     .currency-text{min-width:0}
     .currency-code{font-weight:800;font-size:17px;line-height:1.1}
     .currency-name{margin-top:3px;font-size:13px;color:var(--muted);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:none;
+      white-space:nowrap;overflow:visible;text-overflow:clip;max-width:none;
       line-height:1.15}
     .right-side{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:0 0 auto}
     .sparkline-col{display:flex;align-items:center;opacity:0;transition:opacity .5s;flex:0 0 auto}
@@ -139,7 +139,8 @@
       line-height:1.4;
       white-space:nowrap;
       justify-self:start;
-      text-align:center;
+      text-align:left;
+      padding-left:7px;
       font-variant-numeric:tabular-nums;
       font-feature-settings:"tnum" 1;
     }
@@ -228,7 +229,7 @@
       .currency-badge{width:42px;height:42px;border-radius:11px;font-size:17.5px}
       .currency-code{font-size:15.5px}
       .rate-value{font-size:15.5px}
-      .currency-name{font-size:12px}
+      .currency-name{font-size:11px}
       .right-side{gap:8px}
       .sparkline-col{display:none}
       .rate-row{justify-content:flex-end;gap:4px}
