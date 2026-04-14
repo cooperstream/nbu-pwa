@@ -974,7 +974,7 @@ async function loadDashboard(forceRefresh=false){
     }
 
     const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
-    lastUpd.textContent=`Дані на: ${currentRaw[0]?.exchangedate||"—"} · валюта відображення: ${selectedBase} · оновлено о ${t}`;
+    lastUpd.textContent=`Дані на: ${currentRaw[0]?.exchangedate||"—"} · оновлено о ${t}`;
     localStorage.setItem("nbu5_last_fetch",Date.now().toString());
     prefetchSparklines();
   }catch(err){
