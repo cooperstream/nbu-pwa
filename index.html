@@ -159,8 +159,8 @@
       color:var(--muted);font-size:13px;text-align:center;padding:24px 10px;
     }
     .chart-error{color:var(--danger)}
-    .chart-wrap{position:relative;height:230px;display:none}
-    .chart-wrap.ready{display:block}
+    .chart-wrap{position:relative;height:230px;display:block;opacity:0;pointer-events:none;transition:opacity .18s ease}
+    .chart-wrap.ready{opacity:1;pointer-events:auto}
 
     .loading-screen,.global-error{
       padding:28px 16px;text-align:center;
@@ -608,12 +608,6 @@ async function switchPeriod(cc,pKey){
   document.getElementById(`wrap-${cc}`)?.querySelectorAll(".period-tab")
     .forEach(b=>b.classList.toggle("active",b.dataset.period===pKey));
 
-  if(chartInstances[cc]){
-    chartInstances[cc].destroy();
-    delete chartInstances[cc];
-  }
-
-  document.getElementById(`cwrap-${cc}`)?.classList.remove("ready");
   await loadChart(cc,pKey);
   scheduleEnsureCardVisible(cc, 220);
 }
