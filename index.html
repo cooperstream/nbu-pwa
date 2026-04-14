@@ -191,7 +191,7 @@
     ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 
     @media(max-width:560px){
-      .header{padding:18px 18px 14px;margin-bottom:8px}
+      .header{padding:18px 18px 14px;margin-bottom:10px}
       .base-switcher{margin-left:0}
       .last-updated{margin-left:0}
       .card{padding:13.5px 14px;gap:5px}
@@ -937,7 +937,7 @@ function rerenderForBase(){
 
   const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
   const dateText=lastUpd.textContent.match(/Дані на:\s([^·]+)/)?.[1]?.trim()||"—";
-  lastUpd.textContent=`Дані на: ${dateText} · валюта відображення: ${selectedBase} · оновлено о ${t}`;
+  lastUpd.textContent=`Дані на: ${dateText} · оновлено о ${t}`;
 }
 
 async function loadDashboard(forceRefresh=false){
