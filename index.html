@@ -172,8 +172,11 @@
     }
     .conv-listbox-btn[aria-expanded="true"]::after{transform:translateY(-50%) rotate(180deg)}
     .conv-listbox-btn:focus-visible{outline:none;border-color:rgba(34,197,94,.42);box-shadow:0 0 0 2px rgba(34,197,94,.2)}
+    .conv-listbox-portal{
+      position:fixed;inset:0;pointer-events:none;z-index:1200;
+    }
     .conv-listbox{
-      position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:8;
+      position:fixed;z-index:1201;pointer-events:auto;
       list-style:none;margin:0;padding:4px;
       border:1px solid var(--border);border-radius:10px;background:#0f172a;
       box-shadow:var(--shadow);max-height:190px;overflow:auto;
@@ -513,6 +516,10 @@ const converterResultEl = document.getElementById("converter-result");
 const converterRateEl = document.getElementById("converter-rate");
 const customDropdownState = new Map();
 const shouldUseCustomConverterDropdown = window.matchMedia("(pointer:coarse)").matches;
+const CUSTOM_DROPDOWN_SAFE_MARGIN = 8;
+const CUSTOM_DROPDOWN_GAP = 6;
+const CUSTOM_DROPDOWN_MAX_HEIGHT = 260;
+const CUSTOM_DROPDOWN_MIN_HEIGHT = 120;
 let activeCustomListbox = null;
 let selectedBase = "UAH";
 let ratesByCode = {};
@@ -1270,6 +1277,49 @@ function closeActiveCustomListbox(force=false){
   activeCustomListbox=null;
 }
 
+function getCustomDropdownPortal(){
+  let portal=document.getElementById("conv-listbox-portal");
+  if(portal)return portal;
+  portal=document.createElement("div");
+  portal.id="conv-listbox-portal";
+  portal.className="conv-listbox-portal";
+  document.body.append(portal);
+  return portal;
+}
+
+function positionCustomListbox(selectEl){
+  const state=customDropdownState.get(selectEl);
+  if(!state || state.listbox.hidden)return;
+
+  const rect=state.button.getBoundingClientRect();
+  const vw=window.innerWidth;
+  const vh=window.innerHeight;
+  const safe=CUSTOM_DROPDOWN_SAFE_MARGIN;
+  const gap=CUSTOM_DROPDOWN_GAP;
+
+  const width=Math.min(rect.width,Math.max(0,vw-safe*2));
+  const left=Math.min(Math.max(rect.left,safe),Math.max(safe,vw-safe-width));
+
+  const spaceBelow=vh-rect.bottom-safe-gap;
+  const spaceAbove=rect.top-safe-gap;
+  const preferDown=spaceBelow>=CUSTOM_DROPDOWN_MIN_HEIGHT || spaceBelow>=spaceAbove;
+  const available=Math.max(0,preferDown?spaceBelow:spaceAbove);
+  const fallbackAvailable=Math.max(spaceBelow,spaceAbove);
+  const viewportMax=Math.max(80,Math.min(CUSTOM_DROPDOWN_MAX_HEIGHT,vh-safe*2));
+  const maxHeight=available>=CUSTOM_DROPDOWN_MIN_HEIGHT
+    ? Math.min(viewportMax,available)
+    : Math.min(viewportMax,Math.max(80,fallbackAvailable));
+
+  let top=preferDown ? rect.bottom+gap : rect.top-gap-maxHeight;
+  if(top+maxHeight>vh-safe)top=vh-safe-maxHeight;
+  if(top<safe)top=safe;
+
+  state.listbox.style.left=`${Math.round(left)}px`;
+  state.listbox.style.top=`${Math.round(top)}px`;
+  state.listbox.style.width=`${Math.round(width)}px`;
+  state.listbox.style.maxHeight=`${Math.round(maxHeight)}px`;
+}
+
 function syncCustomDropdown(selectEl){
   const state=customDropdownState.get(selectEl);
   if(!state)return;
@@ -1300,8 +1350,9 @@ function ensureCustomConverterDropdown(selectEl){
 
   const wrap=document.createElement("div");
   wrap.className="conv-listbox-wrap";
-  wrap.append(btn,listbox);
+  wrap.append(btn);
   selectEl.insertAdjacentElement("afterend",wrap);
+  getCustomDropdownPortal().append(listbox);
   selectEl.classList.add("conv-select-native-hidden");
 
   btn.addEventListener("click",()=>{
@@ -1309,7 +1360,10 @@ function ensureCustomConverterDropdown(selectEl){
     closeActiveCustomListbox();
     listbox.hidden=isOpen;
     btn.setAttribute("aria-expanded",String(!isOpen));
-    if(!isOpen)activeCustomListbox=selectEl;
+    if(!isOpen){
+      activeCustomListbox=selectEl;
+      positionCustomListbox(selectEl);
+    }
   });
 
   btn.addEventListener("keydown",e=>{
@@ -1319,6 +1373,7 @@ function ensureCustomConverterDropdown(selectEl){
     listbox.hidden=false;
     btn.setAttribute("aria-expanded","true");
     activeCustomListbox=selectEl;
+    positionCustomListbox(selectEl);
     const selected=listbox.querySelector('[aria-selected="true"]')||listbox.querySelector('[role="option"]');
     selected?.focus();
   });
@@ -1398,6 +1453,7 @@ function openConverter(){
 }
 
 function closeConverter(){
+  closeActiveCustomListbox();
   headerEl?.classList.remove("converter-open");
   converterOpenBtn?.setAttribute("aria-expanded","false");
   converterOpenBtn?.setAttribute("aria-label","Розгорнути конвертер");
@@ -1556,11 +1612,21 @@ document.addEventListener("keydown",e=>{
 });
 document.addEventListener("click",e=>{
   const path=e.composedPath?.()||[];
-  if(!path.some(node=>node?.classList?.contains?.("conv-listbox-wrap")))closeActiveCustomListbox();
+  const clickedInsideCustomDropdown = path.some(node=>{
+    if(!node?.classList)return false;
+    return node.classList.contains("conv-listbox-wrap")
+      || node.classList.contains("conv-listbox")
+      || node.classList.contains("conv-listbox-option");
+  });
+  if(!clickedInsideCustomDropdown)closeActiveCustomListbox();
 });
 window.addEventListener("appinstalled",()=>{deferredPrompt=null;installBtn.style.display="none"});
 if("serviceWorker" in navigator)
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+
+window.addEventListener("resize",()=>positionCustomListbox(activeCustomListbox));
+window.addEventListener("orientationchange",()=>positionCustomListbox(activeCustomListbox));
+window.addEventListener("scroll",()=>positionCustomListbox(activeCustomListbox),true);
 
 window.addEventListener("resize", () => {
   const active = document.querySelector(".item-wrapper.active");
