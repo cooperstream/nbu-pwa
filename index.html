@@ -294,10 +294,7 @@ function sameCalendarDay(a,b){
     && a.getDate()===b.getDate();
 }
 function getAdaptive30dStepDays(){
-  const w=window.innerWidth||1024;
-  if(w<=560)return 3;
-  if(w<=1024)return 2;
-  return 2;
+  return 3;
 }
 function buildHistorySampleDates(periodKey,end){
   const endDate=new Date(end.getFullYear(),end.getMonth(),end.getDate());
@@ -337,6 +334,20 @@ async function nbuFetch(url){
   return r.json();
 }
 
+async function fetchHistoryPoint(url,timeoutMs=6000){
+  try{
+    const r=await fetch(url,{signal:AbortSignal.timeout(timeoutMs)});
+    if(!r.ok)return{ok:false,kind:"http",status:r.status};
+    const raw=await r.json();
+    if(!Array.isArray(raw)||!raw.length||!raw[0]?.rate)return{ok:false,kind:"empty"};
+    return{ok:true,rate:Number(raw[0].rate)};
+  }catch(err){
+    const name=err?.name||"";
+    if(name==="TimeoutError"||name==="AbortError")return{ok:false,kind:"timeout"};
+    return{ok:false,kind:"http"};
+  }
+}
+
 async function getCurrentRates(forceRefresh=false){
   const today=fmtYMD(new Date());
   if(!forceRefresh){
@@ -372,30 +383,57 @@ async function getHistory(cc,periodKey){
   if(legacyCached)return legacyCached.map(i=>({date:new Date(i.d),rate:i.r}));
 
   const dates=buildHistorySampleDates(periodKey,new Date());
+  const minPointsByPeriod={"30d":5,"90d":6,"1y":6};
+  const minPoints=minPointsByPeriod[periodKey]||4;
   const maxParallel=5;
   const result=new Array(dates.length).fill(null);
-  let cursor=0;
+  const stats={timeout:0,http:0,empty:0,failed:0,retried:0};
 
-  async function worker(){
-    while(cursor<dates.length){
-      const idx=cursor++;
-      const d=dates[idx];
-      const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
-      try{
-        const raw=await nbuFetch(url);
-        if(Array.isArray(raw)&&raw.length>0&&raw[0].rate){
-          result[idx]={date:d,rate:Number(raw[0].rate)};
+  async function runBatch(indexes,batchMaxParallel,timeoutMs,countAsRetried=false){
+    let cursor=0;
+    async function worker(){
+      while(cursor<indexes.length){
+        const pos=cursor++;
+        const idx=indexes[pos];
+        const d=dates[idx];
+        const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
+        const res=await fetchHistoryPoint(url,timeoutMs);
+        if(res.ok){
+          result[idx]={date:d,rate:res.rate};
+          continue;
         }
-      }catch(e){}
+        stats.failed++;
+        if(res.kind==="timeout")stats.timeout++;
+        else if(res.kind==="empty")stats.empty++;
+        else stats.http++;
+        if(countAsRetried)stats.retried++;
+      }
+    }
+    const workers=Array.from({length:Math.min(batchMaxParallel,indexes.length)},()=>worker());
+    await Promise.all(workers);
+  }
+
+  const allIndexes=dates.map((_,idx)=>idx);
+  await runBatch(allIndexes,maxParallel,6000,false);
+
+  let normalized=result.filter(Boolean).sort((a,b)=>a.date-b.date);
+  if(normalized.length<minPoints){
+    const missingIndexes=result
+      .map((v,idx)=>v?null:idx)
+      .filter(idx=>idx!==null);
+    if(missingIndexes.length){
+      await runBatch(missingIndexes,2,9000,true);
+      normalized=result.filter(Boolean).sort((a,b)=>a.date-b.date);
     }
   }
 
-  const workers=Array.from({length:Math.min(maxParallel,dates.length)},()=>worker());
-  await Promise.all(workers);
-
-  const normalized=result
-    .filter(Boolean)
-    .sort((a,b)=>a.date-b.date);
+  const failRatio=dates.length?stats.failed/dates.length:0;
+  const hasTransportIssues=(stats.timeout+stats.http)>0;
+  if(!normalized.length&&hasTransportIssues&&failRatio>=0.3){
+    const err=new Error("Сервер НБУ не відповідає стабільно, спробуйте пізніше.");
+    err.code="HISTORY_FETCH_FAILED";
+    throw err;
+  }
 
   cSet(cKey,normalized.map(i=>({d:i.date.getTime(),r:i.rate})));
   return normalized;
@@ -678,7 +716,15 @@ function renderChart(cc,history,pKey){
 
 function prefetchSparklines(){
   if(window.matchMedia("(max-width: 560px)").matches)return;
-  const codes=[...CODES];
+  const maxCards=3;
+  const orderedVisibleCodes=[...CODES].filter(cc=>{
+    const el=document.getElementById(`spark-${cc}`);
+    if(!el)return false;
+    const rect=el.getBoundingClientRect();
+    const viewportPad=120;
+    return rect.bottom>=-viewportPad&&rect.top<=window.innerHeight+viewportPad;
+  }).slice(0,maxCards);
+  const codes=orderedVisibleCodes.length?orderedVisibleCodes:[...CODES].slice(0,2);
   let failures=0;
   const maxFailures=3;
 
@@ -701,11 +747,19 @@ function prefetchSparklines(){
   };
 
   const runPrefetch=()=>codes.reduce((p,cc)=>p.then(()=>maybePrefetchVisible(cc)),Promise.resolve());
-  if("requestIdleCallback" in window){
-    window.requestIdleCallback(()=>{runPrefetch().catch(()=>{});},{timeout:1200});
-  }else{
-    window.setTimeout(()=>{runPrefetch().catch(()=>{});},250);
-  }
+  const startAfterInteraction=()=>{
+    window.removeEventListener("pointerdown",startAfterInteraction);
+    window.removeEventListener("keydown",startAfterInteraction);
+    window.removeEventListener("touchstart",startAfterInteraction);
+    if("requestIdleCallback" in window){
+      window.requestIdleCallback(()=>{runPrefetch().catch(()=>{});},{timeout:1400});
+    }else{
+      window.setTimeout(()=>{runPrefetch().catch(()=>{});},350);
+    }
+  };
+  window.addEventListener("pointerdown",startAfterInteraction,{once:true,passive:true});
+  window.addEventListener("keydown",startAfterInteraction,{once:true});
+  window.addEventListener("touchstart",startAfterInteraction,{once:true,passive:true});
 }
 
 async function loadDashboard(forceRefresh=false){
