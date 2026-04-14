@@ -730,7 +730,7 @@ function renderChart(cc,history,pKey){
 
 function prefetchSparklines(){
   if(window.matchMedia("(max-width: 560px)").matches)return;
-  const maxCards=3;
+  const maxCards=8;
   const orderedVisibleCodes=[...CODES].filter(cc=>{
     const el=document.getElementById(`spark-${cc}`);
     if(!el)return false;
