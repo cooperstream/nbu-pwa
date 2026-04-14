@@ -115,7 +115,7 @@
     }
     .rate-row{
       display:grid;
-      grid-template-columns: var(--delta-col-w) max-content;
+      grid-template-columns: max-content var(--delta-col-w);
       align-items:center;
       justify-content:flex-end;
       gap:var(--rate-row-gap);
@@ -142,9 +142,9 @@
       border-radius:6px;
       line-height:1.4;
       white-space:nowrap;
-      justify-self:start;
-      text-align:left;
-      padding-left:7px;
+      justify-self:end;
+      text-align:right;
+      padding-right:7px;
       overflow:hidden;
       text-overflow:ellipsis;
       font-variant-numeric:tabular-nums;
@@ -683,8 +683,8 @@ function renderCards(rates,prevMap,baseCode){
           <div class="sparkline-col" id="spark-${item.cc}"></div>
           <div class="rate-box">
             <div class="rate-row">
-              ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
               <span class="rate-value">${fmtValueWithBase(item.rate,baseCode)}</span>
+              ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
             </div>
             <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
           </div>
