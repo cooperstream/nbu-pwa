@@ -1034,9 +1034,17 @@ function renderChart(cc,history,pKey,baseCode){
     const val=values[idx];
     topTip.textContent=`${fmtRate(val)} ${baseCode} · ${dateLabel}`;
 
-    const chartWidth=chart.width;
-    const safeX=Math.max(6,Math.min(chartWidth-6,x));
-    topTip.style.left=`${safeX}px`;
+    const bubbleWidth=topTip.offsetWidth;
+    const chartArea=chart.chartArea||{};
+    const left=Number.isFinite(chartArea.left)?chartArea.left:0;
+    const right=Number.isFinite(chartArea.right)?chartArea.right:chart.width;
+    const padding=6;
+    const half=bubbleWidth/2;
+    const minCenter=left+padding+half;
+    const maxCenter=right-padding-half;
+    const desiredCenter=x;
+    const safeCenter=Math.max(minCenter,Math.min(maxCenter,desiredCenter));
+    topTip.style.left=`${safeCenter}px`;
     topTip.classList.add("visible");
   }
 
