@@ -260,8 +260,9 @@ const TTL = {
   h30:   20*60*1000,
   h90:   60*60*1000,
   h1y:   12*60*60*1000,
+  hEmpty:2*60*1000,
 };
-const HIST_CACHE_VERSION = 2;
+const HIST_CACHE_VERSION = 3;
 
 const chartInstances={}, activePeriod={}, memCache={}, chartRequestTokens={};
 
@@ -366,10 +367,18 @@ async function getYesterdayRates(){
 async function getHistory(cc,periodKey){
   const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
   const cKey=`hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
+  const emptyKey=`hist_empty_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
+  if(cGet(emptyKey,TTL.hEmpty))return [];
+
   const cached=cGet(cKey,ttlH);
-  if(cached)return cached.map(i=>({date:new Date(i.d),rate:i.r}));
+  if(Array.isArray(cached)&&cached.length>0){
+    return cached.map(i=>({date:new Date(i.d),rate:i.r}));
+  }
+
   const legacyCached=cGet(`hist_${cc}_${periodKey}`,ttlH);
-  if(legacyCached)return legacyCached.map(i=>({date:new Date(i.d),rate:i.r}));
+  if(Array.isArray(legacyCached)&&legacyCached.length>0){
+    return legacyCached.map(i=>({date:new Date(i.d),rate:i.r}));
+  }
 
   const dates=buildHistorySampleDates(periodKey,new Date());
   const maxParallel=5;
@@ -396,6 +405,11 @@ async function getHistory(cc,periodKey){
   const normalized=result
     .filter(Boolean)
     .sort((a,b)=>a.date-b.date);
+
+  if(normalized.length===0){
+    cSet(emptyKey,true);
+    return normalized;
+  }
 
   cSet(cKey,normalized.map(i=>({d:i.date.getTime(),r:i.rate})));
   return normalized;
