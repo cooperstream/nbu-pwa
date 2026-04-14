@@ -248,13 +248,13 @@ const CURRENCY_META = {
   USD:{name:"Долар США",         symbol:"$" },
   EUR:{name:"Євро",              symbol:"€" },
   PLN:{name:"Польський злотий",  symbol:"zł"},
-  GBP:{name:"Фунт стерлінгів",   symbol:"£" },
-  CHF:{name:"Швейцарський франк",symbol:"Fr"},
-  CAD:{name:"Канадський долар",  symbol:"C$"},
-  JPY:{name:"Японська єна",      symbol:"¥" },
   CNY:{name:"Китайський юань",   symbol:"元"},
+  XAU:{name:"Золото",            symbol:"Au"},
+  XAG:{name:"Срібло",            symbol:"Ag"},
+  XPT:{name:"Платина",           symbol:"Pt"},
+  XPD:{name:"Паладій",           symbol:"Pd"},
 };
-const CODES = Object.keys(CURRENCY_META);
+const CODES = ["USD","EUR","PLN","CNY","XAU","XAG","XPT","XPD"];
 const PERIODS = {
   "30d":{label:"30 дн",days:30},
   "90d":{label:"90 дн",days:90},
