@@ -765,7 +765,19 @@ function runPrefetchSparklines(){
     }
   };
 
-  return codes.reduce((p,cc)=>p.then(()=>maybePrefetchVisible(cc)),Promise.resolve());
+  const runWithConcurrency=(items,workerCount,task)=>{
+    const queue=[...items];
+    const workers=Array.from({length:Math.min(workerCount,queue.length)},async()=>{
+      while(queue.length&&failures<maxFailures){
+        const cc=queue.shift();
+        if(!cc)break;
+        await task(cc);
+      }
+    });
+    return Promise.all(workers);
+  };
+
+  return runWithConcurrency(codes,3,maybePrefetchVisible);
 }
 
 function launchSparklinesPrefetch(){
