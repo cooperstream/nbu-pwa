@@ -728,8 +728,11 @@ function renderChart(cc,history,pKey){
   });
 }
 
-function prefetchSparklines(){
-  if(window.matchMedia("(max-width: 560px)").matches)return;
+let sparkPrefetchLaunched=false;
+let sparkPrefetchPromise=null;
+
+function runPrefetchSparklines(){
+  if(window.matchMedia("(max-width: 560px)").matches)return Promise.resolve();
   const maxCards=8;
   const orderedVisibleCodes=[...CODES].filter(cc=>{
     const el=document.getElementById(`spark-${cc}`);
@@ -746,6 +749,7 @@ function prefetchSparklines(){
     if(failures>=maxFailures)return;
     const el=document.getElementById(`spark-${cc}`);
     if(!el)return;
+    if(el.classList.contains("ready")||el.dataset.sparkReady==="1")return;
     const rect=el.getBoundingClientRect();
     const viewportPad=120;
     const isVisible=rect.bottom>=-viewportPad&&rect.top<=window.innerHeight+viewportPad;
@@ -755,21 +759,31 @@ function prefetchSparklines(){
       if(h.length<2)return;
       el.innerHTML=buildSparkline(h.map(p=>p.rate));
       el.classList.add("ready");
+      el.dataset.sparkReady="1";
     }catch(e){
       failures++;
     }
   };
 
-  const runPrefetch=()=>codes.reduce((p,cc)=>p.then(()=>maybePrefetchVisible(cc)),Promise.resolve());
+  return codes.reduce((p,cc)=>p.then(()=>maybePrefetchVisible(cc)),Promise.resolve());
+}
+
+function launchSparklinesPrefetch(){
+  if(sparkPrefetchLaunched)return sparkPrefetchPromise||Promise.resolve();
+  sparkPrefetchLaunched=true;
+  sparkPrefetchPromise=runPrefetchSparklines()
+    .catch(()=>{})
+    .finally(()=>{sparkPrefetchPromise=null;});
+  return sparkPrefetchPromise;
+}
+
+function prefetchSparklines(){
+  if(window.matchMedia("(max-width: 560px)").matches)return;
   const startAfterInteraction=()=>{
     window.removeEventListener("pointerdown",startAfterInteraction);
     window.removeEventListener("keydown",startAfterInteraction);
     window.removeEventListener("touchstart",startAfterInteraction);
-    if("requestIdleCallback" in window){
-      window.requestIdleCallback(()=>{runPrefetch().catch(()=>{});},{timeout:1400});
-    }else{
-      window.setTimeout(()=>{runPrefetch().catch(()=>{});},350);
-    }
+    launchSparklinesPrefetch();
   };
   window.addEventListener("pointerdown",startAfterInteraction,{once:true,passive:true});
   window.addEventListener("keydown",startAfterInteraction,{once:true});
@@ -797,6 +811,14 @@ async function loadDashboard(forceRefresh=false){
     Object.keys(activePeriod).forEach(k=>delete activePeriod[k]);
 
     renderCards(current,prevMap);
+    sparkPrefetchLaunched=false;
+    sparkPrefetchPromise=null;
+
+    if("requestIdleCallback" in window){
+      window.requestIdleCallback(()=>{launchSparklinesPrefetch();},{timeout:1400});
+    }else{
+      window.setTimeout(()=>{launchSparklinesPrefetch();},350);
+    }
 
     const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
     lastUpd.textContent=`Дані на: ${current[0]?.exchangedate||"—"} · оновлено о ${t}`;
