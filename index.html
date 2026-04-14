@@ -107,14 +107,16 @@
     .sparkline-col.ready{opacity:1}
     .rate-box{
       text-align:right;
+      width:calc(62px + 8px + 11ch);
       min-width:calc(62px + 8px + 11ch);
     }
     .rate-row{
       display:grid;
-      grid-template-columns:62px minmax(11ch, auto);
+      grid-template-columns:62px minmax(0, 1fr);
       align-items:center;
-      justify-content:end;
+      justify-content:start;
       column-gap:8px;
+      width:100%;
     }
     .rate-value{
       color:#dbe4ea;
@@ -136,7 +138,7 @@
       line-height:1.4;
       white-space:nowrap;
       text-align:center;
-      justify-self:end;
+      justify-self:start;
       font-variant-numeric:tabular-nums;
       font-feature-settings:"tnum" 1;
     }
@@ -224,9 +226,9 @@
       .currency-name{font-size:12px}
       .right-side{gap:8px}
       .sparkline-col{display:none}
-      .rate-box{min-width:calc(52px + 4px + 9.2ch)}
-      .rate-row{grid-template-columns:52px minmax(9.2ch, auto);column-gap:4px}
-      .delta{width:52px;font-size:10.5px;padding:2px 4px}
+      .rate-box{width:calc(52px + 4px + 9.2ch);min-width:calc(52px + 4px + 9.2ch)}
+      .rate-row{grid-template-columns:52px minmax(0, 1fr);justify-content:start;column-gap:4px;width:100%}
+      .delta{width:52px;font-size:10.5px;padding:2px 4px;justify-self:start}
       .rate-note{font-size:11.5px}
       .grid{gap:10px}
       .chart-wrap{height:180px}
