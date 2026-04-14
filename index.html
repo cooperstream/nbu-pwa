@@ -115,11 +115,14 @@
     }
     .rate-row{
       display:grid;
-      grid-template-columns: max-content var(--delta-col-w);
+      grid-template-columns: 1fr var(--delta-col-w);
       align-items:center;
-      justify-content:flex-end;
       gap:var(--rate-row-gap);
       width:100%;
+    }
+    .rate-main{
+      justify-self:end;
+      text-align:right;
     }
     .rate-value{
       color:#dbe4ea;
@@ -239,7 +242,7 @@
       .currency-name{font-size:11px}
       .right-side{gap:8px}
       .sparkline-col{display:none}
-      .rate-row{justify-content:flex-end}
+      .rate-main{justify-self:end;text-align:right}
       .delta{font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
       .grid{gap:10px}
@@ -683,10 +686,12 @@ function renderCards(rates,prevMap,baseCode){
           <div class="sparkline-col" id="spark-${item.cc}"></div>
           <div class="rate-box">
             <div class="rate-row">
-              <span class="rate-value">${fmtValueWithBase(item.rate,baseCode)}</span>
+              <div class="rate-main">
+                <span class="rate-value">${fmtValueWithBase(item.rate,baseCode)}</span>
+                <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
+              </div>
               ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
             </div>
-            <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
           </div>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2"
