@@ -119,6 +119,15 @@
       background:rgba(255,255,255,.03);color:var(--text);padding:0 10px;font-size:14px;
       font-family:inherit;
     }
+    .conv-input[type="number"]{
+      appearance:textfield;
+      -moz-appearance:textfield;
+    }
+    .conv-input[type="number"]::-webkit-outer-spin-button,
+    .conv-input[type="number"]::-webkit-inner-spin-button{
+      -webkit-appearance:none;
+      margin:0;
+    }
     .conv-select{
       appearance:none;-webkit-appearance:none;-moz-appearance:none;
       background-color:var(--panel-2);
