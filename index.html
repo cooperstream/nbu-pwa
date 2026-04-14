@@ -161,6 +161,12 @@
     .chart-error{color:var(--danger)}
     .chart-wrap{position:relative;height:230px;display:block;opacity:0;pointer-events:none;transition:opacity .18s ease}
     .chart-wrap.ready{opacity:1;pointer-events:auto}
+    .chart-wrap.loading{opacity:1;pointer-events:none}
+    .chart-wrap.loading::before{
+      content:"";position:absolute;top:50%;left:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
+      border:2px solid rgba(148,163,184,.35);border-top-color:var(--primary);border-radius:50%;
+      animation:spin .8s linear infinite;z-index:2;
+    }
 
     .loading-screen,.global-error{
       padding:28px 16px;text-align:center;
@@ -617,7 +623,13 @@ async function loadChart(cc,pKey){
   const requestToken = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
   chartRequestTokens[cc] = requestToken;
 
-  setMsg(cc,"loader",true);setMsg(cc,"err",false);setMsg(cc,"empty",false);
+  const cwrap=document.getElementById(`cwrap-${cc}`);
+  if(cwrap){
+    cwrap.classList.remove("ready");
+    cwrap.classList.add("loading");
+  }
+
+  setMsg(cc,"loader",false);setMsg(cc,"err",false);setMsg(cc,"empty",false);
   try{
     const history=await getHistory(cc,pKey);
 
@@ -626,10 +638,15 @@ async function loadChart(cc,pKey){
     if(!document.getElementById(`wrap-${cc}`)?.classList.contains("active")) return;
 
     setMsg(cc,"loader",false);
-    if(!history.length){setMsg(cc,"empty",true,"Немає даних за цей період.");return}
+    if(!history.length){
+      cwrap?.classList.remove("loading");
+      setMsg(cc,"empty",true,"Немає даних за цей період.");
+      return;
+    }
     renderChart(cc,history,pKey);
   }catch(err){
     if(chartRequestTokens[cc] !== requestToken) return;
+    cwrap?.classList.remove("loading");
     setMsg(cc,"loader",false);
     setMsg(cc,"err",true,`Помилка: ${escHtml(err.message)}`);
   }
@@ -656,6 +673,7 @@ function renderChart(cc,history,pKey){
     : {day:"numeric",month:"short"};
   const labels=data.map(p=>p.date.toLocaleDateString("uk-UA",locOpts));
   const values=data.map(p=>p.rate);
+  cwrap.classList.remove("loading");
   cwrap.classList.add("ready");
 
   const is30d=pKey==="30d";
