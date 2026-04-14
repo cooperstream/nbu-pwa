@@ -261,6 +261,7 @@ const TTL = {
   h90:   60*60*1000,
   h1y:   12*60*60*1000,
 };
+const HIST_CACHE_VERSION = 2;
 
 const chartInstances={}, activePeriod={}, memCache={}, chartRequestTokens={};
 
@@ -292,13 +293,21 @@ function sameCalendarDay(a,b){
     && a.getMonth()===b.getMonth()
     && a.getDate()===b.getDate();
 }
+function getAdaptive30dStepDays(){
+  const w=window.innerWidth||1024;
+  if(w<=560)return 3;
+  if(w<=1024)return 2;
+  return 2;
+}
 function buildHistorySampleDates(periodKey,end){
   const endDate=new Date(end.getFullYear(),end.getMonth(),end.getDate());
 
   if(periodKey==="30d"){
     const start=addDays(endDate,-30);
+    const step=getAdaptive30dStepDays();
     const dates=[];
-    for(let d=new Date(start);d<=endDate;d=addDays(d,1))dates.push(new Date(d));
+    for(let d=new Date(start);d<=endDate;d=addDays(d,step))dates.push(new Date(d));
+    if(!dates.length||!sameCalendarDay(dates[dates.length-1],endDate))dates.push(new Date(endDate));
     return dates;
   }
 
@@ -356,29 +365,40 @@ async function getYesterdayRates(){
 
 async function getHistory(cc,periodKey){
   const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
-  const cKey=`hist_${cc}_${periodKey}`;
+  const cKey=`hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
   const cached=cGet(cKey,ttlH);
   if(cached)return cached.map(i=>({date:new Date(i.d),rate:i.r}));
+  const legacyCached=cGet(`hist_${cc}_${periodKey}`,ttlH);
+  if(legacyCached)return legacyCached.map(i=>({date:new Date(i.d),rate:i.r}));
 
   const dates=buildHistorySampleDates(periodKey,new Date());
+  const maxParallel=5;
+  const result=new Array(dates.length).fill(null);
+  let cursor=0;
 
-  const requests=dates.map(async d=>{
-    const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
-    try{
-      const raw=await nbuFetch(url);
-      if(Array.isArray(raw)&&raw.length>0&&raw[0].rate){
-        return {date:d,rate:Number(raw[0].rate)};
-      }
-    }catch(e){}
-    return null;
-  });
+  async function worker(){
+    while(cursor<dates.length){
+      const idx=cursor++;
+      const d=dates[idx];
+      const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
+      try{
+        const raw=await nbuFetch(url);
+        if(Array.isArray(raw)&&raw.length>0&&raw[0].rate){
+          result[idx]={date:d,rate:Number(raw[0].rate)};
+        }
+      }catch(e){}
+    }
+  }
 
-  const result=(await Promise.all(requests))
+  const workers=Array.from({length:Math.min(maxParallel,dates.length)},()=>worker());
+  await Promise.all(workers);
+
+  const normalized=result
     .filter(Boolean)
     .sort((a,b)=>a.date-b.date);
 
-  cSet(cKey,result.map(i=>({d:i.date.getTime(),r:i.rate})));
-  return result;
+  cSet(cKey,normalized.map(i=>({d:i.date.getTime(),r:i.rate})));
+  return normalized;
 }
 
 function buildSparkline(values,W=68,H=30){
@@ -658,16 +678,34 @@ function renderChart(cc,history,pKey){
 
 function prefetchSparklines(){
   if(window.matchMedia("(max-width: 560px)").matches)return;
-  CODES.forEach(async cc=>{
+  const codes=[...CODES];
+  let failures=0;
+  const maxFailures=3;
+
+  const maybePrefetchVisible=async cc=>{
+    if(failures>=maxFailures)return;
+    const el=document.getElementById(`spark-${cc}`);
+    if(!el)return;
+    const rect=el.getBoundingClientRect();
+    const viewportPad=120;
+    const isVisible=rect.bottom>=-viewportPad&&rect.top<=window.innerHeight+viewportPad;
+    if(!isVisible)return;
     try{
       const h=await getHistory(cc,"30d");
       if(h.length<2)return;
-      const el=document.getElementById(`spark-${cc}`);
-      if(!el)return;
       el.innerHTML=buildSparkline(h.map(p=>p.rate));
       el.classList.add("ready");
-    }catch(e){}
-  });
+    }catch(e){
+      failures++;
+    }
+  };
+
+  const runPrefetch=()=>codes.reduce((p,cc)=>p.then(()=>maybePrefetchVisible(cc)),Promise.resolve());
+  if("requestIdleCallback" in window){
+    window.requestIdleCallback(()=>{runPrefetch().catch(()=>{});},{timeout:1200});
+  }else{
+    window.setTimeout(()=>{runPrefetch().catch(()=>{});},250);
+  }
 }
 
 async function loadDashboard(forceRefresh=false){
