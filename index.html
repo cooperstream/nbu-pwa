@@ -172,6 +172,28 @@
     .chart-wrap{position:relative;height:230px;display:block;opacity:0;pointer-events:none;transition:opacity .18s ease}
     .chart-wrap.ready{opacity:1;pointer-events:auto}
     .chart-wrap.loading{opacity:1;pointer-events:none}
+    .chart-top-indicator{
+      position:absolute;
+      top:6px;
+      left:0;
+      z-index:3;
+      pointer-events:none;
+      transform:translateX(-50%);
+      background:rgba(11,18,32,.92);
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:8px;
+      padding:4px 8px;
+      font-size:12px;
+      line-height:1.2;
+      color:#e5e7eb;
+      white-space:nowrap;
+      opacity:0;
+      transition:opacity .14s ease;
+      max-width:calc(100% - 10px);
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chart-top-indicator.visible{opacity:1}
     .chart-wrap.loading::before{
       content:"";position:absolute;top:50%;left:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
       border:2px solid rgba(148,163,184,.35);border-top-color:var(--primary);border-radius:50%;
@@ -670,6 +692,7 @@ function renderCards(rates,prevMap,baseCode){
           <div class="chart-error"  id="err-${item.cc}"   style="display:none"></div>
           <div class="chart-empty"  id="empty-${item.cc}" style="display:none">Немає даних.</div>
           <div class="chart-wrap"   id="cwrap-${item.cc}">
+            <div class="chart-top-indicator" id="tip-${item.cc}" aria-live="polite"></div>
             <canvas id="chart-${item.cc}"></canvas>
           </div>
         </div>
@@ -761,6 +784,7 @@ async function loadChart(cc,pKey){
 function renderChart(cc,history,pKey,baseCode){
   const cwrap=document.getElementById(`cwrap-${cc}`);
   const canvas=document.getElementById(`chart-${cc}`);
+  const topTip=document.getElementById(`tip-${cc}`);
   if(!cwrap||!canvas)return;
 
   if(chartInstances[cc]){
@@ -785,8 +809,58 @@ function renderChart(cc,history,pKey,baseCode){
   const is30d=pKey==="30d";
   const is90d=pKey==="90d";
   const is1y=pKey==="1y";
+  const linePluginId=`hoverGuide_${cc}`;
+  const topPad=42;
+
+  function hideTopTip(){
+    if(!topTip)return;
+    topTip.classList.remove("visible");
+    topTip.textContent="";
+  }
+
+  function showTopTip(chart,activeEl){
+    if(!topTip||!activeEl)return;
+    const x=activeEl.element.x;
+    const idx=activeEl.index;
+    const dateLabel=labels[idx]||"";
+    const val=values[idx];
+    topTip.textContent=`${fmtRate(val)} ${baseCode} · ${dateLabel}`;
+
+    const chartWidth=chart.width;
+    const safeX=Math.max(6,Math.min(chartWidth-6,x));
+    topTip.style.left=`${safeX}px`;
+    topTip.classList.add("visible");
+  }
 
   chartInstances[cc]=new Chart(canvas.getContext("2d"),{
+    plugins:[{
+      id:linePluginId,
+      afterDatasetsDraw(chart){
+        const active=chart.tooltip?.getActiveElements?.()||[];
+        if(!active.length)return;
+        const x=active[0].element.x;
+        const {top,bottom}=chart.chartArea||{};
+        if(!Number.isFinite(top)||!Number.isFinite(bottom))return;
+        const ctx=chart.ctx;
+        ctx.save();
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle="rgba(148,163,184,.75)";
+        ctx.lineWidth=1;
+        ctx.beginPath();
+        ctx.moveTo(x,top);
+        ctx.lineTo(x,bottom);
+        ctx.stroke();
+        ctx.restore();
+      },
+      afterEvent(chart,args){
+        const active=chart.tooltip?.getActiveElements?.()||[];
+        if(!active.length){
+          hideTopTip();
+          return;
+        }
+        showTopTip(chart,active[0]);
+      }
+    }],
     type:"line",
     data:{labels,datasets:[{
       label:`Курс (${baseCode})`,
@@ -808,16 +882,20 @@ function renderChart(cc,history,pKey,baseCode){
     options:{
       responsive:true,
       maintainAspectRatio:false,
+      layout:{padding:{top:topPad}},
       interaction:{mode:"index",intersect:false},
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:"rgba(15,23,42,.96)",
-          titleColor:"#e5e7eb",
-          bodyColor:"#e5e7eb",
-          borderColor:"rgba(148,163,184,.22)",
-          borderWidth:1,
-          callbacks:{label:ctx=>` ${fmtRate(ctx.parsed.y)} ${baseCode}`}
+          enabled:false,
+          external(context){
+            const active=context.tooltip?.getActiveElements?.()||[];
+            if(!active.length){
+              hideTopTip();
+              return;
+            }
+            showTopTip(context.chart,active[0]);
+          }
         }
       },
       scales:{
