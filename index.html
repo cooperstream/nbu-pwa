@@ -63,6 +63,16 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     .icon-btn.spinning svg{animation:spin .75s linear infinite}
     .last-updated{margin-top:10px;margin-left:56px;color:var(--muted);font-size:12px}
+    .base-switcher{
+      margin-top:12px;margin-left:56px;display:flex;flex-wrap:wrap;gap:7px;
+    }
+    .base-btn{
+      padding:5px 11px;border-radius:8px;border:1px solid var(--border);
+      background:transparent;color:var(--muted);font-size:12px;font-weight:700;
+      cursor:pointer;transition:background .15s,color .15s,border-color .15s;font-family:inherit;
+    }
+    .base-btn:hover{color:var(--text);border-color:rgba(148,163,184,.4)}
+    .base-btn.active{background:var(--primary-soft);color:#86efac;border-color:rgba(34,197,94,.35)}
 
     .grid{display:grid;gap:clamp(14px, 1.8vh, 18px)}
 
@@ -182,6 +192,8 @@
 
     @media(max-width:560px){
       .header{padding:18px 18px 14px;margin-bottom:16px}
+      .base-switcher{margin-left:0}
+      .last-updated{margin-left:0}
       .card{padding:14px 14px;gap:8px}
       .currency-info{gap:10px}
       .currency-badge{width:44px;height:44px;border-radius:11px;font-size:18px}
@@ -235,6 +247,13 @@
       </div>
     </div>
     <div class="last-updated" id="last-updated" aria-live="polite">Завантаження…</div>
+    <div class="base-switcher" id="base-switcher" role="group" aria-label="Базова валюта">
+      <button class="base-btn active" type="button" data-base="UAH">UAH</button>
+      <button class="base-btn" type="button" data-base="USD">USD</button>
+      <button class="base-btn" type="button" data-base="EUR">EUR</button>
+      <button class="base-btn" type="button" data-base="PLN">PLN</button>
+      <button class="base-btn" type="button" data-base="CNY">CNY</button>
+    </div>
   </header>
   <div class="grid" id="rates-grid">
     <div class="loading-screen">Завантаження даних НБУ…</div>
@@ -245,6 +264,7 @@
 "use strict";
 
 const CURRENCY_META = {
+  UAH:{name:"Українська гривня", symbol:"₴" },
   USD:{name:"Долар США",         symbol:"$" },
   EUR:{name:"Євро",              symbol:"€" },
   PLN:{name:"Польський злотий",  symbol:"zł"},
@@ -254,7 +274,9 @@ const CURRENCY_META = {
   XPT:{name:"Платина",           symbol:"Pt"},
   XPD:{name:"Паладій",           symbol:"Pd"},
 };
-const CODES = ["USD","EUR","PLN","CNY","XAU","XAG","XPT","XPD"];
+const ORDERED_CODES = ["UAH","USD","EUR","PLN","CNY","XAU","XAG","XPT","XPD"];
+const BASE_CODES = ["UAH","USD","EUR","PLN","CNY"];
+const FOREIGN_CODES = ORDERED_CODES.filter(cc=>cc!=="UAH");
 const PERIODS = {
   "30d":{label:"30 дн",days:30},
   "90d":{label:"90 дн",days:90},
@@ -276,6 +298,65 @@ const grid       = document.getElementById("rates-grid");
 const lastUpd    = document.getElementById("last-updated");
 const refreshBtn = document.getElementById("refresh-btn");
 const installBtn = document.getElementById("install-btn");
+const baseSwitcher = document.getElementById("base-switcher");
+let selectedBase = "UAH";
+let ratesByCode = {};
+let prevRatesByCode = {};
+
+function toDayKey(dateObj){
+  return `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}`;
+}
+
+function toRateMap(items){
+  const map={UAH:1};
+  (items||[]).forEach(i=>{
+    if(i&&i.cc&&Number.isFinite(Number(i.rate)))map[i.cc]=Number(i.rate);
+  });
+  return map;
+}
+
+function convertRateForBase(cc,rateMap,baseCode){
+  if(cc===baseCode)return 1;
+  if(baseCode==="UAH")return rateMap[cc]??null;
+  if(cc==="UAH"){
+    const baseRate=rateMap[baseCode];
+    return baseRate?1/baseRate:null;
+  }
+  const baseRate=rateMap[baseCode];
+  const targetRate=rateMap[cc];
+  if(!baseRate||!targetRate)return null;
+  return targetRate/baseRate;
+}
+
+function getDisplayRates(baseCode){
+  return ORDERED_CODES
+    .filter(cc=>cc!==baseCode)
+    .map(cc=>{
+      const rawRate=convertRateForBase(cc,ratesByCode,baseCode);
+      if(rawRate==null)return null;
+      return {cc,txt:CURRENCY_META[cc]?.name||cc,rate:rawRate,units:1};
+    })
+    .filter(Boolean);
+}
+
+function getDisplayPrevMap(baseCode){
+  const map={};
+  ORDERED_CODES.forEach(cc=>{
+    if(cc===baseCode)return;
+    const v=convertRateForBase(cc,prevRatesByCode,baseCode);
+    if(v!=null)map[cc]=v;
+  });
+  return map;
+}
+
+function updateBaseButtons(){
+  baseSwitcher?.querySelectorAll(".base-btn")
+    .forEach(btn=>btn.classList.toggle("active",btn.dataset.base===selectedBase));
+}
+
+function fmtValueWithBase(value,baseCode){
+  return `${fmtRate(value)}&thinsp;${baseCode}`;
+}
 
 function cSet(k,v){
   memCache[k]={v,t:Date.now()};
@@ -382,6 +463,10 @@ async function getYesterdayRates(){
 }
 
 async function getHistory(cc,periodKey){
+  if(cc==="UAH"){
+    const dates=buildHistorySampleDates(periodKey,new Date());
+    return dates.map(date=>({date,rate:1}));
+  }
   const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
   const cKey=`hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
   const emptyKey=`hist_empty_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
@@ -459,6 +544,27 @@ async function getHistory(cc,periodKey){
   return normalized;
 }
 
+async function getDisplayHistory(cc,periodKey,baseCode){
+  if(baseCode==="UAH")return getHistory(cc,periodKey);
+  const [targetHist,baseHist]=await Promise.all([
+    getHistory(cc,periodKey),
+    getHistory(baseCode,periodKey)
+  ]);
+  const baseByDate=new Map(baseHist.map(p=>[toDayKey(p.date),p.rate]));
+  if(cc==="UAH"){
+    return baseHist
+      .filter(p=>p.rate)
+      .map(p=>({date:p.date,rate:1/p.rate}));
+  }
+  return targetHist
+    .map(p=>{
+      const baseRate=baseByDate.get(toDayKey(p.date));
+      if(!baseRate)return null;
+      return {date:p.date,rate:p.rate/baseRate};
+    })
+    .filter(Boolean);
+}
+
 function buildSparkline(values,W=68,H=30){
   if(!values||values.length<2)return"";
   const min=Math.min(...values),max=Math.max(...values),rng=max-min||1;
@@ -479,12 +585,12 @@ function buildSparkline(values,W=68,H=30){
   </svg>`;
 }
 
-function buildDelta(today,prev){
+function buildDelta(today,prev,baseCode){
   if(prev==null)return`<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
   const diff=today-prev,pct=(diff/prev)*100;
   if(Math.abs(pct)<0.005)return`<span class="delta flat">±0%</span>`;
   const cls=pct>0?"up":"down",arrow=pct>0?"↑":"↓";
-  return`<span class="delta ${cls}" title="${pct>0?"+":"−"}${Math.abs(diff).toFixed(2)} ₴">`
+  return`<span class="delta ${cls}" title="${pct>0?"+":"−"}${Math.abs(diff).toFixed(4)} ${baseCode}">`
     +`${arrow}${Math.abs(pct).toFixed(2)}%</span>`;
 }
 
@@ -521,7 +627,7 @@ function scheduleEnsureCardVisible(cc, delay = 0){
   window.setTimeout(() => ensureCardFullyVisible(cc), delay);
 }
 
-function renderCards(rates,prevMap){
+function renderCards(rates,prevMap,baseCode){
   grid.innerHTML="";
   rates.forEach(item=>{
     const meta=CURRENCY_META[item.cc]||{};
@@ -541,8 +647,8 @@ function renderCards(rates,prevMap){
           <div class="sparkline-col" id="spark-${item.cc}"></div>
           <div class="rate-box">
             <div class="rate-row">
-              ${buildDelta(item.rate,prevMap[item.cc])}
-              <span class="rate-value">${fmtRate(item.rate)}&thinsp;₴</span>
+              ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
+              <span class="rate-value">${fmtValueWithBase(item.rate,baseCode)}</span>
             </div>
             <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
           </div>
@@ -631,7 +737,7 @@ async function loadChart(cc,pKey){
 
   setMsg(cc,"loader",false);setMsg(cc,"err",false);setMsg(cc,"empty",false);
   try{
-    const history=await getHistory(cc,pKey);
+    const history=await getDisplayHistory(cc,pKey,selectedBase);
 
     if(chartRequestTokens[cc] !== requestToken) return;
     if(activePeriod[cc] !== pKey) return;
@@ -643,7 +749,7 @@ async function loadChart(cc,pKey){
       setMsg(cc,"empty",true,"Немає даних за цей період.");
       return;
     }
-    renderChart(cc,history,pKey);
+    renderChart(cc,history,pKey,selectedBase);
   }catch(err){
     if(chartRequestTokens[cc] !== requestToken) return;
     cwrap?.classList.remove("loading");
@@ -652,7 +758,7 @@ async function loadChart(cc,pKey){
   }
 }
 
-function renderChart(cc,history,pKey){
+function renderChart(cc,history,pKey,baseCode){
   const cwrap=document.getElementById(`cwrap-${cc}`);
   const canvas=document.getElementById(`chart-${cc}`);
   if(!cwrap||!canvas)return;
@@ -683,7 +789,7 @@ function renderChart(cc,history,pKey){
   chartInstances[cc]=new Chart(canvas.getContext("2d"),{
     type:"line",
     data:{labels,datasets:[{
-      label:"Курс",
+      label:`Курс (${baseCode})`,
       data:values,
       borderColor:"#22c55e",
       backgroundColor:"rgba(34,197,94,.11)",
@@ -711,7 +817,7 @@ function renderChart(cc,history,pKey){
           bodyColor:"#e5e7eb",
           borderColor:"rgba(148,163,184,.22)",
           borderWidth:1,
-          callbacks:{label:ctx=>` ${fmtRate(ctx.parsed.y)} ₴`}
+          callbacks:{label:ctx=>` ${fmtRate(ctx.parsed.y)} ${baseCode}`}
         }
       },
       scales:{
@@ -726,7 +832,7 @@ function renderChart(cc,history,pKey){
           border:{color:"#243041"}
         },
         y:{
-          ticks:{color:"#94a3b8",callback:v=>`${fmtRate(v)} ₴`},
+          ticks:{color:"#94a3b8",callback:v=>`${fmtRate(v)} ${baseCode}`},
           grid:{color:"rgba(148,163,184,.07)"},
           border:{color:"#243041"}
         }
@@ -746,14 +852,15 @@ let sparkPrefetchPromise=null;
 function runPrefetchSparklines(){
   if(window.matchMedia("(max-width: 560px)").matches)return Promise.resolve();
   const maxCards=8;
-  const orderedVisibleCodes=[...CODES].filter(cc=>{
+  const displayCodes=ORDERED_CODES.filter(cc=>cc!==selectedBase);
+  const orderedVisibleCodes=[...displayCodes].filter(cc=>{
     const el=document.getElementById(`spark-${cc}`);
     if(!el)return false;
     const rect=el.getBoundingClientRect();
     const viewportPad=120;
     return rect.bottom>=-viewportPad&&rect.top<=window.innerHeight+viewportPad;
   }).slice(0,maxCards);
-  const codes=orderedVisibleCodes.length?orderedVisibleCodes:[...CODES].slice(0,2);
+  const codes=orderedVisibleCodes.length?orderedVisibleCodes:[...displayCodes].slice(0,2);
   let failures=0;
   const maxFailures=3;
 
@@ -767,7 +874,7 @@ function runPrefetchSparklines(){
     const isVisible=rect.bottom>=-viewportPad&&rect.top<=window.innerHeight+viewportPad;
     if(!isVisible)return;
     try{
-      const h=await getHistory(cc,"30d");
+      const h=await getDisplayHistory(cc,"30d",selectedBase);
       if(h.length<2)return;
       el.innerHTML=buildSparkline(h.map(p=>p.rate));
       el.classList.add("ready");
@@ -814,6 +921,25 @@ function prefetchSparklines(){
   window.addEventListener("touchstart",startAfterInteraction,{once:true,passive:true});
 }
 
+function rerenderForBase(){
+  if(!Object.keys(ratesByCode).length)return;
+  Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}});
+  Object.keys(chartInstances).forEach(k=>delete chartInstances[k]);
+  Object.keys(activePeriod).forEach(k=>delete activePeriod[k]);
+
+  const current=getDisplayRates(selectedBase);
+  const prevMap=getDisplayPrevMap(selectedBase);
+  renderCards(current,prevMap,selectedBase);
+
+  sparkPrefetchLaunched=false;
+  sparkPrefetchPromise=null;
+  launchSparklinesPrefetch();
+
+  const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
+  const dateText=lastUpd.textContent.match(/Дані на:\s([^·]+)/)?.[1]?.trim()||"—";
+  lastUpd.textContent=`Дані на: ${dateText} · валюта відображення: ${selectedBase} · оновлено о ${t}`;
+}
+
 async function loadDashboard(forceRefresh=false){
   refreshBtn.classList.add("spinning");refreshBtn.disabled=true;
   try{
@@ -821,20 +947,23 @@ async function loadDashboard(forceRefresh=false){
       getCurrentRates(forceRefresh),
       getYesterdayRates()
     ]);
-    let current=(curRes.status==="fulfilled"?curRes.value:[])
-      .filter(i=>CODES.includes(i.cc));
-    if(!current.length)throw new Error("Дані НБУ недоступні");
-    current.sort((a,b)=>CODES.indexOf(a.cc)-CODES.indexOf(b.cc));
+    const currentRaw=(curRes.status==="fulfilled"?curRes.value:[])
+      .filter(i=>FOREIGN_CODES.includes(i.cc));
+    if(!currentRaw.length)throw new Error("Дані НБУ недоступні");
 
-    const prevMap={};
-    if(yestRes.status==="fulfilled")
-      yestRes.value.forEach(i=>{prevMap[i.cc]=i.rate});
+    ratesByCode=toRateMap(currentRaw);
+    prevRatesByCode=toRateMap(
+      (yestRes.status==="fulfilled"?yestRes.value:[]).filter(i=>FOREIGN_CODES.includes(i.cc))
+    );
+
+    const current=getDisplayRates(selectedBase);
+    const prevMap=getDisplayPrevMap(selectedBase);
 
     Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}});
     Object.keys(chartInstances).forEach(k=>delete chartInstances[k]);
     Object.keys(activePeriod).forEach(k=>delete activePeriod[k]);
 
-    renderCards(current,prevMap);
+    renderCards(current,prevMap,selectedBase);
     sparkPrefetchLaunched=false;
     sparkPrefetchPromise=null;
 
@@ -845,7 +974,7 @@ async function loadDashboard(forceRefresh=false){
     }
 
     const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
-    lastUpd.textContent=`Дані на: ${current[0]?.exchangedate||"—"} · оновлено о ${t}`;
+    lastUpd.textContent=`Дані на: ${currentRaw[0]?.exchangedate||"—"} · валюта відображення: ${selectedBase} · оновлено о ${t}`;
     localStorage.setItem("nbu5_last_fetch",Date.now().toString());
     prefetchSparklines();
   }catch(err){
@@ -860,6 +989,15 @@ async function loadDashboard(forceRefresh=false){
 }
 
 refreshBtn.addEventListener("click",()=>loadDashboard(true));
+baseSwitcher?.addEventListener("click",e=>{
+  const btn=e.target.closest(".base-btn");
+  if(!btn)return;
+  const nextBase=btn.dataset.base;
+  if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase)return;
+  selectedBase=nextBase;
+  updateBaseButtons();
+  rerenderForBase();
+});
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden)return;
   const last=parseInt(localStorage.getItem("nbu5_last_fetch")||"0");
@@ -896,6 +1034,7 @@ window.addEventListener("orientationchange", () => {
 });
 
 loadDashboard();
+updateBaseButtons();
 </script>
 </body>
 </html>
