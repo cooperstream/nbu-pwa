@@ -22,6 +22,7 @@
       --text: #e5e7eb; --muted: #94a3b8; --border: #243041;
       --primary: #22c55e; --primary-soft: rgba(34,197,94,0.16);
       --danger: #f87171; --shadow: 0 10px 30px rgba(0,0,0,0.28); --radius: 16px;
+      --delta-col-w: 62px;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{
@@ -107,7 +108,8 @@
     .sparkline-col.ready{opacity:1}
     .rate-box{text-align:right}
     .rate-row{
-      display:flex;
+      display:grid;
+      grid-template-columns: var(--delta-col-w) max-content;
       align-items:center;
       justify-content:flex-end;
       gap:8px;
@@ -124,13 +126,14 @@
       font-feature-settings:"tnum" 1;
     }
     .delta{
-      width:62px;
+      width:var(--delta-col-w);
       font-size:11px;
       font-weight:600;
       padding:2px 5px;
       border-radius:6px;
       line-height:1.4;
       white-space:nowrap;
+      justify-self:start;
       text-align:center;
       font-variant-numeric:tabular-nums;
       font-feature-settings:"tnum" 1;
@@ -208,6 +211,7 @@
     ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 
     @media(max-width:560px){
+      :root{--delta-col-w:52px}
       .header{padding:18px 18px 14px;margin-bottom:10px}
       .base-switcher{margin-left:0}
       .last-updated{margin-left:0}
@@ -220,7 +224,7 @@
       .right-side{gap:8px}
       .sparkline-col{display:none}
       .rate-row{justify-content:flex-end;gap:4px}
-      .delta{width:52px;font-size:10.5px;padding:2px 4px}
+      .delta{font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
       .grid{gap:10px}
       .chart-wrap{height:180px}
