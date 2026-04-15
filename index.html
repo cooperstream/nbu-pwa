@@ -249,12 +249,14 @@
     .currency-name{margin-top:3px;font-size:13px;color:var(--muted);
       white-space:nowrap;overflow:visible;text-overflow:clip;max-width:none;
       line-height:1.15}
-    .right-side{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:0 0 auto}
-    .sparkline-col{display:flex;align-items:center;opacity:0;transition:opacity .5s;flex:0 0 auto}
+    .right-side{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 auto;min-width:0}
+    .sparkline-col{display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .5s;flex:1 1 auto;min-width:0}
     .sparkline-col.ready{opacity:1}
     .rate-box{
+      flex:0 0 var(--rate-box-w);
       width:var(--rate-box-w);
       max-width:100%;
+      margin-left:auto;
       text-align:right;
     }
     .rate-row{
@@ -406,7 +408,7 @@
       .rate-value{font-size:15.5px}
       .rate-value{gap:4px}
       .currency-name{font-size:11px}
-      .right-side{gap:8px}
+      .right-side{gap:8px;flex:0 0 auto}
       .sparkline-col{display:none}
       .rate-meta{gap:4px}
       .delta{font-size:10.5px;padding:2px 4px}
