@@ -133,6 +133,12 @@
       background:rgba(255,255,255,.03);color:var(--text);padding:0 10px;font-size:14px;
       font-family:inherit;
     }
+    .conv-input:focus,
+    .conv-input:focus-visible{
+      outline:none;
+      border-color:rgba(34,197,94,.42);
+      box-shadow:0 0 0 2px rgba(34,197,94,.2);
+    }
     .conv-input[type="number"]{
       appearance:textfield;
       -moz-appearance:textfield;
@@ -300,10 +306,10 @@
       letter-spacing:.01em;
     }
     .rate-currency{
-      color:#94a3b8;
-      font-size:.72em;
-      font-weight:700;
-      letter-spacing:.03em;
+      color:inherit;
+      font-size:1em;
+      font-weight:inherit;
+      letter-spacing:inherit;
     }
     .delta{
       display:inline-flex;
@@ -1121,6 +1127,10 @@ function renderChart(cc,history,pKey,baseCode){
     : {day:"numeric",month:"short"};
   const labels=data.map(p=>p.date.toLocaleDateString("uk-UA",locOpts));
   const values=data.map(p=>p.rate);
+  const isUpTrend=values.length<2 || values[values.length-1] >= values[0];
+  const trendLineColor=isUpTrend ? "#22c55e" : "#f87171";
+  const trendFillColor=isUpTrend ? "rgba(34,197,94,.11)" : "rgba(248,113,113,.14)";
+  const trendPointBg=isUpTrend ? "#86efac" : "#fca5a5";
   cwrap.classList.remove("loading");
   cwrap.classList.add("ready");
 
@@ -1191,8 +1201,8 @@ function renderChart(cc,history,pKey,baseCode){
     data:{labels,datasets:[{
       label:`Курс (${baseCode})`,
       data:values,
-      borderColor:"#22c55e",
-      backgroundColor:"rgba(34,197,94,.11)",
+      borderColor:trendLineColor,
+      backgroundColor:trendFillColor,
       fill:true,
       borderWidth:is30d?2.1:2.3,
       cubicInterpolationMode:is30d?"default":"monotone",
@@ -1201,8 +1211,8 @@ function renderChart(cc,history,pKey,baseCode){
       pointRadius:2,
       pointHoverRadius:4,
       pointHitRadius:14,
-      pointBackgroundColor:"#86efac",
-      pointBorderColor:"#22c55e",
+      pointBackgroundColor:trendPointBg,
+      pointBorderColor:trendLineColor,
       pointBorderWidth:1,
     }]},
     options:{
