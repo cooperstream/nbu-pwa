@@ -98,24 +98,30 @@
     .header.converter-open .converter-toggle .chevron{transform:rotate(180deg);color:#86efac}
 
     .header-converter{
-  max-height:0;
-  opacity:0;
-  overflow:hidden;
-  transition:max-height .26s ease-out, opacity .16s ease-out;
-  margin-top:0;
-}
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      transition:max-height .26s ease-out, opacity .16s ease-out;
+    }
     .header.converter-open .header-converter{
       max-height:360px;
       opacity:1;
+    }
+    .header-converter-shell{
       margin-top:10px;
-      border-top:1px solid var(--border);
       padding-top:12px;
+      border-top:1px solid var(--border);
     }
     .header-converter-inner{
       border:1px solid var(--border);
       background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(15,23,42,.95));
       border-radius:14px;
       padding:12px;
+      transform:translateY(-4px);
+      transition:transform .2s ease-out;
+    }
+    .header.converter-open .header-converter-inner{
+      transform:translateY(0);
     }
     .converter-title{font-size:14px;font-weight:700;margin-bottom:10px}
     .converter-grid{
@@ -527,28 +533,30 @@
       </button>
     </div>
     <section class="header-converter" id="header-converter" aria-label="Конвертер валют">
-      <div class="header-converter-inner">
-        <h2 class="converter-title">Конвертер валют</h2>
-        <div class="converter-grid">
-          <div>
-            <label class="conv-label" for="converter-amount">Сума</label>
-            <input class="conv-input" id="converter-amount" type="number" min="0" step="any" inputmode="decimal"
-                   placeholder="Введіть суму">
-          </div>
-          <div class="conv-row">
-            <div class="conv-field">
-              <label class="conv-label" for="converter-from">З валюти</label>
-              <select class="conv-select" id="converter-from"></select>
+      <div class="header-converter-shell">
+        <div class="header-converter-inner">
+          <h2 class="converter-title">Конвертер валют</h2>
+          <div class="converter-grid">
+            <div>
+              <label class="conv-label" for="converter-amount">Сума</label>
+              <input class="conv-input" id="converter-amount" type="number" min="0" step="any" inputmode="decimal"
+                     placeholder="Введіть суму">
             </div>
-            <button class="swap-btn" id="converter-swap" type="button" aria-label="Поміняти валюти місцями">⇄</button>
-            <div class="conv-field">
-              <label class="conv-label" for="converter-to">У валюту</label>
-              <select class="conv-select" id="converter-to"></select>
+            <div class="conv-row">
+              <div class="conv-field">
+                <label class="conv-label" for="converter-from">З валюти</label>
+                <select class="conv-select" id="converter-from"></select>
+              </div>
+              <button class="swap-btn" id="converter-swap" type="button" aria-label="Поміняти валюти місцями">⇄</button>
+              <div class="conv-field">
+                <label class="conv-label" for="converter-to">У валюту</label>
+                <select class="conv-select" id="converter-to"></select>
+              </div>
             </div>
-          </div>
-          <div class="result-box" aria-live="polite">
-            <div class="result-main" id="converter-result">—</div>
-            <div class="result-rate" id="converter-rate">Курс: —</div>
+            <div class="result-box" aria-live="polite">
+              <div class="result-main" id="converter-result">—</div>
+              <div class="result-rate" id="converter-rate">Курс: —</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1544,7 +1552,10 @@ function openConverter(){
   converterOpenBtn?.setAttribute("aria-expanded","true");
   converterOpenBtn?.setAttribute("aria-label","Згорнути конвертер");
   converterOpenBtn?.setAttribute("title","Згорнути конвертер");
-  converterAmountInput.focus();
+  const isCoarsePointer = window.matchMedia?.("(hover:none) and (pointer:coarse)").matches;
+  if(!isCoarsePointer){
+    converterAmountInput.focus({preventScroll:true});
+  }
 }
 
 function closeConverter(){
