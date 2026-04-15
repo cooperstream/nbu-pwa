@@ -1177,7 +1177,7 @@ function renderChart(cc,history,pKey,baseCode){
           border:{color:"#243041"}
         },
         y:{
-          ticks:{color:"#94a3b8",callback:v=>`${fmtRate(v)} ${baseCode}`},
+          ticks:{color:"#94a3b8",callback:v=>fmtRate(v)},
           grid:{color:"rgba(148,163,184,.07)"},
           border:{color:"#243041"}
         }
