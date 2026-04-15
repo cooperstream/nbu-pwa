@@ -22,8 +22,6 @@
       --text: #e5e7eb; --muted: #94a3b8; --border: #243041;
       --primary: #22c55e; --primary-soft: rgba(34,197,94,0.16);
       --danger: #f87171; --shadow: 0 10px 30px rgba(0,0,0,0.28); --radius: 16px;
-      --delta-col-w: 62px;
-      --rate-row-gap: 8px;
       --rate-box-w: 250px;
     }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -260,15 +258,21 @@
       text-align:right;
     }
     .rate-row{
-      display:grid;
-      grid-template-columns: 1fr var(--delta-col-w);
-      align-items:center;
-      gap:var(--rate-row-gap);
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
       width:100%;
     }
     .rate-main{
-      justify-self:end;
       text-align:right;
+    }
+    .rate-meta{
+      margin-top:3px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:6px;
+      width:100%;
     }
     .rate-value{
       color:#dbe4ea;
@@ -281,22 +285,23 @@
       font-feature-settings:"tnum" 1;
     }
     .delta{
-      display:block;
-      min-width:var(--delta-col-w);
-      max-width:var(--delta-col-w);
-      width:var(--delta-col-w);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:52px;
+      max-width:62px;
       font-size:11px;
       font-weight:600;
       padding:2px 5px;
       border-radius:6px;
       line-height:1.4;
       white-space:nowrap;
-      justify-self:end;
       text-align:center;
       overflow:hidden;
       text-overflow:ellipsis;
       font-variant-numeric:tabular-nums;
       font-feature-settings:"tnum" 1;
+      flex:0 0 auto;
     }
     .delta.up  {color:#4ade80;background:rgba(34,197,94,.15)}
     .delta.down{color:#f87171;background:rgba(248,113,113,.15)}
@@ -304,7 +309,7 @@
     .delta.loading{color:transparent;background:rgba(148,163,184,.08);
       animation:pulse 1.4s ease-in-out infinite}
     @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
-    .rate-note{margin-top:3px;font-size:12px;color:var(--muted);text-align:right}
+    .rate-note{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
     .chevron{
       width:18px;height:18px;color:var(--muted);flex:0 0 auto;
       transition:transform .25s,color .25s;
@@ -372,8 +377,6 @@
 
     @media(max-width:560px){
       :root{
-        --delta-col-w:52px;
-        --rate-row-gap:4px;
         --rate-box-w:198px;
       }
       .header{padding:18px 18px 14px;margin-bottom:10px}
@@ -391,7 +394,7 @@
       .currency-name{font-size:11px}
       .right-side{gap:8px}
       .sparkline-col{display:none}
-      .rate-main{justify-self:end;text-align:right}
+      .rate-meta{gap:4px}
       .delta{font-size:10.5px;padding:2px 4px}
       .rate-note{font-size:11.5px}
       .grid{gap:10px}
@@ -921,9 +924,11 @@ function renderCards(rates,prevMap,baseCode){
             <div class="rate-row">
               <div class="rate-main">
                 <span class="rate-value">${fmtValueWithBase(item.rate,baseCode)}</span>
-                <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
+                <div class="rate-meta">
+                  ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
+                  <div class="rate-note">за ${units}&thinsp;${item.cc}</div>
+                </div>
               </div>
-              ${buildDelta(item.rate,prevMap[item.cc],baseCode)}
             </div>
           </div>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
