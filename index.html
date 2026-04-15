@@ -689,7 +689,7 @@ async function nbuFetch(url){
 async function fetchHistoryRange(cc,startDate,endDate){
   const start=fmtYMD(startDate);
   const end=fmtYMD(endDate);
-  const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&start=${start}&end=${end}&json`;
+  const url=`https://bank.gov.ua/NBU_Exchange/exchange_site?start=${start}&end=${end}&valcode=${cc}&sort=exchangedate&order=asc&json`;
   const raw=await nbuFetch(url);
   if(!Array.isArray(raw)||!raw.length)return [];
   return raw
