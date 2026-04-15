@@ -509,9 +509,10 @@ const TTL = {
   h1y:   12*60*60*1000,
   hEmpty:2*60*1000,
 };
-const HIST_CACHE_VERSION = 3;
+const HIST_CACHE_VERSION = 4;
 
 const chartInstances={}, activePeriod={}, memCache={}, chartRequestTokens={};
+const inFlightHistoryRaw={}, inFlightDisplayHistory={};
 
 const grid       = document.getElementById("rates-grid");
 const headerEl = document.querySelector(".header");
@@ -661,24 +662,45 @@ function buildHistorySampleDates(periodKey,end){
   return dates;
 }
 
+function getHistoryPeriodBounds(periodKey,end){
+  const endDate=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+  if(periodKey==="30d")return{start:addDays(endDate,-30),end:endDate};
+  if(periodKey==="90d")return{start:addDays(endDate,-90),end:endDate};
+  return{start:addDays(endDate,-365),end:endDate};
+}
+
+function getHistoryTtl(periodKey){
+  return periodKey==="30d" ? TTL.h30 : periodKey==="90d" ? TTL.h90 : TTL.h1y;
+}
+
+function parseNbuDate(value){
+  if(typeof value!=="string")return null;
+  const m=value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if(!m)return null;
+  return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+}
+
 async function nbuFetch(url){
   const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
   if(!r.ok)throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
-async function fetchHistoryPoint(url,timeoutMs=6000){
-  try{
-    const r=await fetch(url,{signal:AbortSignal.timeout(timeoutMs)});
-    if(!r.ok)return{ok:false,kind:"http",status:r.status};
-    const raw=await r.json();
-    if(!Array.isArray(raw)||!raw.length||!raw[0]?.rate)return{ok:false,kind:"empty"};
-    return{ok:true,rate:Number(raw[0].rate)};
-  }catch(err){
-    const name=err?.name||"";
-    if(name==="TimeoutError"||name==="AbortError")return{ok:false,kind:"timeout"};
-    return{ok:false,kind:"http"};
-  }
+async function fetchHistoryRange(cc,startDate,endDate){
+  const start=fmtYMD(startDate);
+  const end=fmtYMD(endDate);
+  const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&start=${start}&end=${end}&json`;
+  const raw=await nbuFetch(url);
+  if(!Array.isArray(raw)||!raw.length)return [];
+  return raw
+    .map(item=>{
+      const date=parseNbuDate(item?.exchangedate);
+      const rate=Number(item?.rate);
+      if(!date||!Number.isFinite(rate)||rate<=0)return null;
+      return {date,rate};
+    })
+    .filter(Boolean)
+    .sort((a,b)=>a.date-b.date);
 }
 
 async function getCurrentRates(forceRefresh=false){
@@ -708,11 +730,12 @@ async function getYesterdayRates(){
 }
 
 async function getHistory(cc,periodKey){
+  const now=new Date();
+  const sampleDates=buildHistorySampleDates(periodKey,now);
   if(cc==="UAH"){
-    const dates=buildHistorySampleDates(periodKey,new Date());
-    return dates.map(date=>({date,rate:1}));
+    return sampleDates.map(date=>({date,rate:1}));
   }
-  const ttlH=periodKey==="30d"?TTL.h30:periodKey==="90d"?TTL.h90:TTL.h1y;
+  const ttlH=getHistoryTtl(periodKey);
   const cKey=`hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
   const emptyKey=`hist_empty_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`;
   if(cGet(emptyKey,TTL.hEmpty))return [];
@@ -727,87 +750,80 @@ async function getHistory(cc,periodKey){
     return legacyCached.map(i=>({date:new Date(i.d),rate:i.r}));
   }
 
-  const dates=buildHistorySampleDates(periodKey,new Date());
-  const minPointsByPeriod={"30d":5,"90d":6,"1y":6};
-  const minPoints=minPointsByPeriod[periodKey]||4;
-  const maxParallel=5;
-  const result=new Array(dates.length).fill(null);
-  const stats={timeout:0,http:0,empty:0,failed:0,retried:0};
+  const inFlightKey=`${cc}_${periodKey}`;
+  if(inFlightHistoryRaw[inFlightKey])return inFlightHistoryRaw[inFlightKey];
 
-  async function runBatch(indexes,batchMaxParallel,timeoutMs,countAsRetried=false){
-    let cursor=0;
-    async function worker(){
-      while(cursor<indexes.length){
-        const pos=cursor++;
-        const idx=indexes[pos];
-        const d=dates[idx];
-        const url=`https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&date=${fmtYMD(d)}&json`;
-        const res=await fetchHistoryPoint(url,timeoutMs);
-        if(res.ok){
-          result[idx]={date:d,rate:res.rate};
-          continue;
-        }
-        stats.failed++;
-        if(res.kind==="timeout")stats.timeout++;
-        else if(res.kind==="empty")stats.empty++;
-        else stats.http++;
-        if(countAsRetried)stats.retried++;
-      }
+  const requestPromise=(async()=>{
+    const bounds=getHistoryPeriodBounds(periodKey,now);
+    const rangePoints=await fetchHistoryRange(cc,bounds.start,bounds.end);
+    if(!rangePoints.length){
+      cSet(emptyKey,true);
+      return [];
     }
-    const workers=Array.from({length:Math.min(batchMaxParallel,indexes.length)},()=>worker());
-    await Promise.all(workers);
-  }
 
-  const allIndexes=dates.map((_,idx)=>idx);
-  await runBatch(allIndexes,maxParallel,6000,false);
+    const byDay=new Map(rangePoints.map(p=>[toDayKey(p.date),p.rate]));
+    const sampled=sampleDates
+      .map(d=>{
+        const rate=byDay.get(toDayKey(d));
+        if(!Number.isFinite(rate))return null;
+        return {date:d,rate};
+      })
+      .filter(Boolean);
 
-  let normalized=result.filter(Boolean).sort((a,b)=>a.date-b.date);
-  if(normalized.length<minPoints){
-    const missingIndexes=result
-      .map((v,idx)=>v?null:idx)
-      .filter(idx=>idx!==null);
-    if(missingIndexes.length){
-      await runBatch(missingIndexes,2,9000,true);
-      normalized=result.filter(Boolean).sort((a,b)=>a.date-b.date);
+    if(!sampled.length){
+      cSet(emptyKey,true);
+      return [];
     }
-  }
 
-  const failRatio=dates.length?stats.failed/dates.length:0;
-  const hasTransportIssues=(stats.timeout+stats.http)>0;
-  if(!normalized.length&&hasTransportIssues&&failRatio>=0.3){
-    const err=new Error("Сервер НБУ не відповідає стабільно, спробуйте пізніше.");
-    err.code="HISTORY_FETCH_FAILED";
-    throw err;
-  }
+    cSet(cKey,sampled.map(i=>({d:i.date.getTime(),r:i.rate})));
+    return sampled;
+  })();
 
-  if(normalized.length===0){
-    cSet(emptyKey,true);
-    return normalized;
+  inFlightHistoryRaw[inFlightKey]=requestPromise;
+  try{
+    return await requestPromise;
+  }finally{
+    delete inFlightHistoryRaw[inFlightKey];
   }
-
-  cSet(cKey,normalized.map(i=>({d:i.date.getTime(),r:i.rate})));
-  return normalized;
 }
 
 async function getDisplayHistory(cc,periodKey,baseCode){
   if(baseCode==="UAH")return getHistory(cc,periodKey);
-  const [targetHist,baseHist]=await Promise.all([
-    getHistory(cc,periodKey),
-    getHistory(baseCode,periodKey)
-  ]);
-  const baseByDate=new Map(baseHist.map(p=>[toDayKey(p.date),p.rate]));
-  if(cc==="UAH"){
-    return baseHist
-      .filter(p=>p.rate)
-      .map(p=>({date:p.date,rate:1/p.rate}));
+  const ttlH=getHistoryTtl(periodKey);
+  const cKey=`dhist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}_${baseCode}`;
+  const cached=cGet(cKey,ttlH);
+  if(Array.isArray(cached)&&cached.length>0){
+    return cached.map(i=>({date:new Date(i.d),rate:i.r}));
   }
-  return targetHist
-    .map(p=>{
-      const baseRate=baseByDate.get(toDayKey(p.date));
-      if(!baseRate)return null;
-      return {date:p.date,rate:p.rate/baseRate};
-    })
-    .filter(Boolean);
+
+  const inFlightKey=`${cc}_${periodKey}_${baseCode}`;
+  if(inFlightDisplayHistory[inFlightKey])return inFlightDisplayHistory[inFlightKey];
+
+  const requestPromise=(async()=>{
+    const [targetHist,baseHist]=await Promise.all([
+      getHistory(cc,periodKey),
+      getHistory(baseCode,periodKey)
+    ]);
+    const baseByDate=new Map(baseHist.map(p=>[toDayKey(p.date),p.rate]));
+    const display=cc==="UAH"
+      ? baseHist.filter(p=>p.rate).map(p=>({date:p.date,rate:1/p.rate}))
+      : targetHist
+        .map(p=>{
+          const baseRate=baseByDate.get(toDayKey(p.date));
+          if(!baseRate)return null;
+          return {date:p.date,rate:p.rate/baseRate};
+        })
+        .filter(Boolean);
+    if(display.length)cSet(cKey,display.map(i=>({d:i.date.getTime(),r:i.rate})));
+    return display;
+  })();
+
+  inFlightDisplayHistory[inFlightKey]=requestPromise;
+  try{
+    return await requestPromise;
+  }finally{
+    delete inFlightDisplayHistory[inFlightKey];
+  }
 }
 
 function buildSparkline(values,W=68,H=30){
@@ -1247,7 +1263,7 @@ function rerenderForBase(){
 
   sparkPrefetchLaunched=false;
   sparkPrefetchPromise=null;
-  launchSparklinesPrefetch();
+  prefetchSparklines();
 
   const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
   const dateText=lastUpd.textContent.match(/Дані на:\s([^·]+)/)?.[1]?.trim()||"—";
@@ -1524,12 +1540,6 @@ async function loadDashboard(forceRefresh=false){
     renderCards(current,prevMap,selectedBase);
     sparkPrefetchLaunched=false;
     sparkPrefetchPromise=null;
-
-    if("requestIdleCallback" in window){
-      window.requestIdleCallback(()=>{launchSparklinesPrefetch();},{timeout:1400});
-    }else{
-      window.setTimeout(()=>{launchSparklinesPrefetch();},350);
-    }
 
     const t=new Date().toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
     lastUpd.textContent=`Дані на: ${currentRaw[0]?.exchangedate||"—"} · оновлено о ${t}`;
