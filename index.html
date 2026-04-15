@@ -689,18 +689,39 @@ async function nbuFetch(url){
 async function fetchHistoryRange(cc,startDate,endDate){
   const start=fmtYMD(startDate);
   const end=fmtYMD(endDate);
-  const url=`https://bank.gov.ua/NBU_Exchange/exchange_site?start=${start}&end=${end}&valcode=${cc}&sort=exchangedate&order=asc&json`;
-  const raw=await nbuFetch(url);
-  if(!Array.isArray(raw)||!raw.length)return [];
-  return raw
-    .map(item=>{
-      const date=parseNbuDate(item?.exchangedate);
-      const rate=Number(item?.rate);
-      if(!date||!Number.isFinite(rate)||rate<=0)return null;
-      return {date,rate};
-    })
-    .filter(Boolean)
-    .sort((a,b)=>a.date-b.date);
+  const urls=[
+    `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=${cc}&start=${start}&end=${end}&json`,
+    `https://bank.gov.ua/NBU_Exchange/exchange_site?start=${start}&end=${end}&valcode=${cc}&sort=exchangedate&order=asc&json`,
+  ];
+
+  let lastError=null;
+  for(const url of urls){
+    try{
+      const raw=await nbuFetch(url);
+      if(!Array.isArray(raw)||!raw.length)continue;
+      const normalized=raw
+        .map(item=>{
+          const date=parseNbuDate(item?.exchangedate);
+          const rate=Number(item?.rate);
+          if(!date||!Number.isFinite(rate)||rate<=0)return null;
+          return {date,rate};
+        })
+        .filter(Boolean)
+        .sort((a,b)=>a.date-b.date);
+      if(!normalized.length)continue;
+
+      const inRangePoints=normalized.filter(p=>p.date>=startDate&&p.date<=endDate);
+      const uniqueDays=new Set(inRangePoints.map(p=>toDayKey(p.date)));
+      if(uniqueDays.size>=2 || (sameCalendarDay(startDate,endDate)&&uniqueDays.size===1)){
+        return inRangePoints;
+      }
+    }catch(err){
+      lastError=err;
+    }
+  }
+
+  if(lastError)throw lastError;
+  return [];
 }
 
 async function getCurrentRates(forceRefresh=false){
