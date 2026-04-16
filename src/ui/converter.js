@@ -102,6 +102,47 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     positionCustomListbox(activeCustomListbox, activeCustomTrigger);
   }
 
+  function positionCustomListbox(selectEl){
+    const state=customDropdownState.get(selectEl);
+    if(!state) return;
+    const { button, listbox }=state;
+    const triggerRect=button.getBoundingClientRect();
+    const viewportWidth=window.innerWidth;
+    const viewportHeight=window.innerHeight;
+    const viewportGap=8;
+    const triggerGap=4;
+
+    listbox.style.position="fixed";
+    listbox.style.width=`${Math.round(triggerRect.width)}px`;
+    listbox.style.left="0px";
+    listbox.style.top="0px";
+
+    const listboxHeight=Math.ceil(listbox.getBoundingClientRect().height||0);
+    const openBelow=triggerRect.bottom+triggerGap+listboxHeight <= viewportHeight-viewportGap || triggerRect.top < listboxHeight;
+
+    let top=openBelow
+      ? triggerRect.bottom+triggerGap
+      : triggerRect.top-listboxHeight-triggerGap;
+    top=Math.max(viewportGap, Math.min(top, viewportHeight-listboxHeight-viewportGap));
+
+    let left=triggerRect.left;
+    const maxLeft=viewportWidth-triggerRect.width-viewportGap;
+    left=Math.max(viewportGap, Math.min(left, maxLeft));
+
+    const availableHeight=openBelow
+      ? viewportHeight-top-viewportGap
+      : triggerRect.top-viewportGap;
+
+    listbox.style.left=`${Math.round(left)}px`;
+    listbox.style.top=`${Math.round(top)}px`;
+    listbox.style.maxHeight=`${Math.max(120, Math.floor(availableHeight))}px`;
+  }
+
+  function repositionActiveCustomListbox(){
+    if(!activeCustomListbox) return;
+    positionCustomListbox(activeCustomListbox);
+  }
+
   function ensureCustom(selectEl){
     if(!shouldUseCustomConverterDropdown || !selectEl || customDropdownState.has(selectEl)) return;
     const listboxId=`${selectEl.id}-listbox`;
@@ -123,9 +164,7 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       listbox.hidden=isOpen; btn.setAttribute("aria-expanded",String(!isOpen));
       if(!isOpen){
         activeCustomListbox=selectEl;
-        activeCustomTrigger=btn;
-        positionCustomListbox(selectEl, btn);
-        requestAnimationFrame(()=>positionCustomListbox(selectEl, btn));
+        positionCustomListbox(selectEl);
       }
     });
 
