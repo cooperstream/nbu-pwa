@@ -1161,6 +1161,7 @@ function renderChart(cc,history,pKey,baseCode){
     : {day:"numeric",month:"short"};
   const labels=data.map(p=>p.date.toLocaleDateString("uk-UA",locOpts));
   const values=data.map(p=>p.rate);
+  const xValues=data.map(p=>new Date(p.date.getFullYear(),p.date.getMonth(),p.date.getDate()).getTime());
   const isUpTrend=isRisingTrend(values);
   const trendLineColor=isUpTrend ? "#22c55e" : "#f87171";
   const trendFillColor=isUpTrend ? "rgba(34,197,94,.11)" : "rgba(248,113,113,.14)";
@@ -1234,7 +1235,7 @@ function renderChart(cc,history,pKey,baseCode){
     type:"line",
     data:{labels,datasets:[{
       label:`Курс (${baseCode})`,
-      data:values,
+      data:is30d?values.map((v,i)=>({x:xValues[i],y:v})):values,
       borderColor:trendLineColor,
       backgroundColor:trendFillColor,
       fill:true,
@@ -1271,12 +1272,25 @@ function renderChart(cc,history,pKey,baseCode){
       scales:{
         x:{
           grid:{display:false},
-          ticks:{
-            color:"#94a3b8",
-            maxRotation:0,
-            autoSkip:true,
-            maxTicksLimit:is1y?6:(is90d?7:8)
-          },
+          ...(is30d?{
+            type:"linear",
+            min:xValues[0],
+            max:xValues[xValues.length-1],
+            ticks:{
+              color:"#94a3b8",
+              maxRotation:0,
+              autoSkip:true,
+              maxTicksLimit:8,
+              callback:v=>new Date(Number(v)).toLocaleDateString("uk-UA",locOpts)
+            }
+          }:{
+            ticks:{
+              color:"#94a3b8",
+              maxRotation:0,
+              autoSkip:true,
+              maxTicksLimit:is1y?6:(is90d?7:8)
+            }
+          }),
           border:{color:"#243041"}
         },
         y:{
