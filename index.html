@@ -916,7 +916,7 @@ function buildSparkline(values,W=68,H=30){
   const py=v=>(H-2-((v-min)/rng)*(H-4)).toFixed(1);
   const pts=values.map((v,i)=>`${px(i)},${py(v)}`).join(" ");
   const area=`M 0,${H} `+values.map((v,i)=>`L ${px(i)},${py(v)}`).join(" ")+` L ${W},${H} Z`;
-  const col=values[values.length-1]>=values[0]?"#22c55e":"#f87171";
+  const col=isRisingTrend(values)?"#22c55e":"#f87171";
   const gid="sg"+Math.random().toString(36).slice(2,8);
   return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" fill="none" aria-hidden="true">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -927,6 +927,32 @@ function buildSparkline(values,W=68,H=30){
     <polyline points="${pts}" stroke="${col}" stroke-width="1.6"
               stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
+}
+
+function getTrendSlope(values){
+  if(!Array.isArray(values)||values.length<2)return 0;
+  const pts=values
+    .map((y,x)=>({x,y:Number(y)}))
+    .filter(p=>Number.isFinite(p.y));
+  if(pts.length<2)return 0;
+
+  const n=pts.length;
+  let sumX=0,sumY=0,sumXY=0,sumXX=0;
+  for(const p of pts){
+    sumX+=p.x;
+    sumY+=p.y;
+    sumXY+=p.x*p.y;
+    sumXX+=p.x*p.x;
+  }
+  const denominator=(n*sumXX)-(sumX*sumX);
+  if(!denominator)return 0;
+  return ((n*sumXY)-(sumX*sumY))/denominator;
+}
+
+function isRisingTrend(values){
+  const slope=getTrendSlope(values);
+  const NEUTRAL_SLOPE_EPSILON=1e-6;
+  return slope>=-NEUTRAL_SLOPE_EPSILON;
 }
 
 function buildDelta(today,prev,baseCode){
@@ -1135,7 +1161,7 @@ function renderChart(cc,history,pKey,baseCode){
     : {day:"numeric",month:"short"};
   const labels=data.map(p=>p.date.toLocaleDateString("uk-UA",locOpts));
   const values=data.map(p=>p.rate);
-  const isUpTrend=values.length<2 || values[values.length-1] >= values[0];
+  const isUpTrend=isRisingTrend(values);
   const trendLineColor=isUpTrend ? "#22c55e" : "#f87171";
   const trendFillColor=isUpTrend ? "rgba(34,197,94,.11)" : "rgba(248,113,113,.14)";
   const trendPointBg=isUpTrend ? "#86efac" : "#fca5a5";
