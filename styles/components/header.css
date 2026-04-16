@@ -16,4 +16,8 @@ h1{font-size:22px;line-height:1.2;letter-spacing:.2px}.subtitle{margin-top:2px;c
 .header.converter-open .converter-toggle{background:rgba(34,197,94,.1);color:var(--primary);border-color:rgba(34,197,94,.3)}
 .header.converter-open .converter-toggle .chevron{transform:rotate(180deg);color:#86efac}
 @media(max-width:560px){.header{padding:4px 12px 14px;margin-bottom:8px}.base-switcher,.last-updated{margin-left:0}}
-@media(max-width:560px) and (orientation:portrait){.last-updated{margin-left:56px}}
+@media(max-width:560px) and (orientation:portrait){
+  .header{padding:4px 12px 10px;margin-bottom:6px}
+  .last-updated{margin-top:8px;margin-left:56px}
+  .base-switcher{margin-top:8px}
+}
