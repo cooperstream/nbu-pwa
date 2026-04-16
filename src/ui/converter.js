@@ -4,6 +4,16 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
   let converterFrom = "USD";
   let converterTo = "UAH";
   let ratesByCode = {};
+  let openPickerName = null;
+  const mqlMobile = window.matchMedia("(max-width: 560px)");
+  const fromTrigger = document.getElementById("converter-from-trigger");
+  const toTrigger = document.getElementById("converter-to-trigger");
+  const fromMenu = document.getElementById("converter-from-menu");
+  const toMenu = document.getElementById("converter-to-menu");
+  const pickers = {
+    from: { select: fromSelect, trigger: fromTrigger, menu: fromMenu },
+    to: { select: toSelect, trigger: toTrigger, menu: toMenu },
+  };
 
   function getConverterCodes(){ return ORDERED_CODES.filter((cc)=>cc==="UAH"||Number.isFinite(ratesByCode[cc])); }
 
@@ -43,9 +53,82 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
 
   function renderConverterOptions(){
     ensureConverterSelections();
-    const options=getConverterCodes().map((cc)=>`<option value="${cc}">${cc}</option>`).join("");
+    const codes=getConverterCodes();
+    const options=codes.map((cc)=>`<option value="${cc}">${cc}</option>`).join("");
     fromSelect.innerHTML=options; toSelect.innerHTML=options;
     fromSelect.value=converterFrom; toSelect.value=converterTo;
+    renderPickerOptions("from", codes, converterFrom);
+    renderPickerOptions("to", codes, converterTo);
+    syncPickerValues();
+  }
+
+  function renderPickerOptions(name, codes, selectedValue){
+    const picker=pickers[name];
+    if(!picker?.menu) return;
+    picker.menu.innerHTML=codes
+      .map((cc)=>`<li><button class="conv-picker-option${cc===selectedValue?" selected":""}" type="button" data-value="${cc}" role="option" aria-selected="${cc===selectedValue}">${cc}</button></li>`)
+      .join("");
+  }
+
+  function syncPickerValues(){
+    if(fromTrigger) fromTrigger.textContent=converterFrom;
+    if(toTrigger) toTrigger.textContent=converterTo;
+    markPickerSelection(fromMenu, converterFrom);
+    markPickerSelection(toMenu, converterTo);
+  }
+
+  function markPickerSelection(menu, value){
+    if(!menu) return;
+    menu.querySelectorAll(".conv-picker-option").forEach((option)=>{
+      const selected=option.dataset.value===value;
+      option.classList.toggle("selected", selected);
+      option.setAttribute("aria-selected", String(selected));
+    });
+  }
+
+  function closePicker(name){
+    const picker=pickers[name];
+    if(!picker?.menu || !picker?.trigger) return;
+    picker.menu.hidden=true;
+    picker.trigger.setAttribute("aria-expanded", "false");
+    if(openPickerName===name) openPickerName=null;
+  }
+
+  function closeAllPickers(){ closePicker("from"); closePicker("to"); }
+
+  function openPicker(name){
+    if(!mqlMobile.matches) return;
+    const picker=pickers[name];
+    if(!picker?.menu || !picker?.trigger) return;
+    const otherName=name==="from"?"to":"from";
+    closePicker(otherName);
+    picker.menu.hidden=false;
+    picker.trigger.setAttribute("aria-expanded", "true");
+    openPickerName=name;
+    positionPicker(name);
+  }
+
+  function positionPicker(name){
+    const picker=pickers[name];
+    if(!picker?.menu || !picker?.trigger || picker.menu.hidden) return;
+    const triggerRect=picker.trigger.getBoundingClientRect();
+    const menu=picker.menu;
+    const minGap=8;
+    const preferredWidth=Math.max(triggerRect.width, 88);
+    menu.style.setProperty("--menu-width", `${preferredWidth}px`);
+    const menuHeight=Math.min(menu.scrollHeight, 220);
+    const spaceBelow=window.innerHeight-triggerRect.bottom-minGap;
+    const spaceAbove=triggerRect.top-minGap;
+    const openUp=spaceBelow<Math.min(148, menuHeight) && spaceAbove>spaceBelow;
+    const top=openUp
+      ? Math.max(minGap, triggerRect.top-menuHeight-6)
+      : Math.min(window.innerHeight-menuHeight-minGap, triggerRect.bottom+6);
+    const left=Math.min(
+      window.innerWidth-preferredWidth-minGap,
+      Math.max(minGap, triggerRect.left),
+    );
+    menu.style.top=`${top}px`;
+    menu.style.left=`${left}px`;
   }
 
   function openConverter(){
@@ -55,7 +138,11 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     converterOpenBtn?.setAttribute("aria-expanded","true");
   }
 
-  function closeConverter(){ headerEl.classList.remove("converter-open"); converterOpenBtn?.setAttribute("aria-expanded","false"); }
+  function closeConverter(){
+    closeAllPickers();
+    headerEl.classList.remove("converter-open");
+    converterOpenBtn?.setAttribute("aria-expanded","false");
+  }
 
   function bindEvents(){
     converterOpenBtn?.addEventListener("click",()=> headerEl.classList.contains("converter-open") ? closeConverter() : openConverter());
@@ -68,10 +155,62 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       amountInput.setSelectionRange(nextCaret,nextCaret);
       updateConverterResult();
     });
-    fromSelect?.addEventListener("change",()=>{ converterFrom=fromSelect.value; if(converterFrom===converterTo){ const next=getConverterCodes().find((cc)=>cc!==converterFrom); if(next){ converterTo=next; toSelect.value=next; } } updateConverterResult(); });
-    toSelect?.addEventListener("change",()=>{ converterTo=toSelect.value; if(converterTo===converterFrom){ const next=getConverterCodes().find((cc)=>cc!==converterTo); if(next){ converterFrom=next; fromSelect.value=next; } } updateConverterResult(); });
-    swapBtn?.addEventListener("click",()=>{ const n=converterTo; converterTo=converterFrom; converterFrom=n; fromSelect.value=converterFrom; toSelect.value=converterTo; updateConverterResult(); });
-    document.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && headerEl.classList.contains("converter-open")) closeConverter(); });
+    fromSelect?.addEventListener("change",()=>{
+      converterFrom=fromSelect.value;
+      if(converterFrom===converterTo){
+        const next=getConverterCodes().find((cc)=>cc!==converterFrom);
+        if(next){ converterTo=next; toSelect.value=next; }
+      }
+      syncPickerValues();
+      updateConverterResult();
+    });
+    toSelect?.addEventListener("change",()=>{
+      converterTo=toSelect.value;
+      if(converterTo===converterFrom){
+        const next=getConverterCodes().find((cc)=>cc!==converterTo);
+        if(next){ converterFrom=next; fromSelect.value=next; }
+      }
+      syncPickerValues();
+      updateConverterResult();
+    });
+    swapBtn?.addEventListener("click",()=>{
+      const n=converterTo;
+      converterTo=converterFrom;
+      converterFrom=n;
+      fromSelect.value=converterFrom;
+      toSelect.value=converterTo;
+      syncPickerValues();
+      updateConverterResult();
+    });
+    fromTrigger?.addEventListener("click",()=> openPickerName==="from" ? closePicker("from") : openPicker("from"));
+    toTrigger?.addEventListener("click",()=> openPickerName==="to" ? closePicker("to") : openPicker("to"));
+    [fromMenu,toMenu].forEach((menu,idx)=>{
+      menu?.addEventListener("click",(event)=>{
+        const option=event.target.closest(".conv-picker-option");
+        if(!option) return;
+        const targetSelect=idx===0 ? fromSelect : toSelect;
+        targetSelect.value=option.dataset.value;
+        targetSelect.dispatchEvent(new Event("change", { bubbles:true }));
+        closeAllPickers();
+      });
+    });
+    document.addEventListener("click",(event)=>{
+      if(!openPickerName) return;
+      const activePicker=pickers[openPickerName];
+      if(activePicker?.trigger?.contains(event.target) || activePicker?.menu?.contains(event.target)) return;
+      closeAllPickers();
+    });
+    document.addEventListener("keydown",(e)=>{
+      if(e.key==="Escape"){
+        closeAllPickers();
+        if(headerEl.classList.contains("converter-open")) closeConverter();
+      }
+    });
+    window.addEventListener("resize",()=>{
+      if(!mqlMobile.matches) closeAllPickers();
+      if(openPickerName) positionPicker(openPickerName);
+    });
+    document.addEventListener("scroll",()=>{ if(openPickerName) positionPicker(openPickerName); }, true);
   }
 
   return {
