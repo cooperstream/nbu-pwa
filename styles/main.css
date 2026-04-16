@@ -10,12 +10,23 @@ html,body{
   background: radial-gradient(circle at top, rgba(34,197,94,0.08), transparent 30%), linear-gradient(180deg,#09111d 0%,#0b1220 100%);
   color:var(--text);
   font-family:Inter,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  min-height:100%;
+  height:100%;
   scrollbar-width:thin; scrollbar-color:#2b3a55 #0b1220;
   -webkit-font-smoothing:antialiased;
 }
-body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:flex;justify-content:center}
-.dashboard{width:100%;max-width:760px}
+body{
+  --body-pad-top:16px;
+  --body-pad-x:16px;
+  --body-pad-bottom:max(16px, env(safe-area-inset-bottom));
+  padding:var(--body-pad-top) var(--body-pad-x) var(--body-pad-bottom);
+  display:flex;
+  justify-content:center;
+}
+.dashboard{
+  width:100%;
+  max-width:760px;
+  min-height:calc(100% - var(--body-pad-top) - var(--body-pad-bottom));
+}
 .grid{display:grid;gap:clamp(14px, 1.8vh, 18px)}
 .loading-screen,.global-error{padding:28px 16px;text-align:center;background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 .global-error{color:var(--danger)}
@@ -32,18 +43,12 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
 
 @media(max-width:560px) and (orientation:portrait){
   body{
-    padding-top:10px;
-    padding-right:12px;
-    padding-left:12px;
-    padding-bottom:max(0px, env(safe-area-inset-bottom));
-    min-height:100svh;
+    --body-pad-top:10px;
+    --body-pad-x:12px;
+    --body-pad-bottom:max(0px, env(safe-area-inset-bottom));
     overflow-x:hidden;
   }
-  @supports (height:100dvh){
-    body{min-height:100dvh}
-  }
   .dashboard{
-    min-height:auto;
     display:block;
   }
   .grid{
