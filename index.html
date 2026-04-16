@@ -28,92 +28,97 @@
 </head>
 <body>
 <div class="dashboard">
-  <header class="header">
-    <div class="header-top">
-      <div class="logo" aria-hidden="true">¤</div>
-      <div class="header-titles">
-        <h1>Курси НБУ</h1>
-        <p class="subtitle">Поточний курс та динаміка</p>
+  <div class="dashboard-top">
+    <header class="header">
+      <div class="header-top">
+        <div class="logo" aria-hidden="true">¤</div>
+        <div class="header-titles">
+          <h1>Курси НБУ</h1>
+          <p class="subtitle">Поточний курс та динаміка</p>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="install-btn" title="Встановити додаток"
+                  aria-label="Встановити додаток" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="refresh-btn" title="Оновити курси" aria-label="Оновити курси">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M23 4v6h-6"/>
+              <path d="M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="header-actions">
-        <button class="icon-btn" id="install-btn" title="Встановити додаток"
-                aria-label="Встановити додаток" style="display:none">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
+      <div class="last-updated" id="last-updated" aria-live="polite">Завантаження…</div>
+      <div class="base-switcher" id="base-switcher" role="group" aria-label="Базова валюта">
+        <div class="base-chips">
+          <button class="base-btn active" type="button" data-base="UAH">UAH</button>
+          <button class="base-btn" type="button" data-base="USD">USD</button>
+          <button class="base-btn" type="button" data-base="EUR">EUR</button>
+          <button class="base-btn" type="button" data-base="PLN">PLN</button>
+          <button class="base-btn" type="button" data-base="CNY">CNY</button>
+        </div>
+        <button class="icon-btn converter-toggle" type="button" id="converter-open"
+                aria-label="Розгорнути конвертер" title="Розгорнути конвертер"
+                aria-expanded="false" aria-controls="header-converter">
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button class="icon-btn" id="refresh-btn" title="Оновити курси" aria-label="Оновити курси">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M23 4v6h-6"/>
-            <path d="M1 20v-6h6"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-        </button>
       </div>
-    </div>
-    <div class="last-updated" id="last-updated" aria-live="polite">Завантаження…</div>
-    <div class="base-switcher" id="base-switcher" role="group" aria-label="Базова валюта">
-      <div class="base-chips">
-        <button class="base-btn active" type="button" data-base="UAH">UAH</button>
-        <button class="base-btn" type="button" data-base="USD">USD</button>
-        <button class="base-btn" type="button" data-base="EUR">EUR</button>
-        <button class="base-btn" type="button" data-base="PLN">PLN</button>
-        <button class="base-btn" type="button" data-base="CNY">CNY</button>
-      </div>
-      <button class="icon-btn converter-toggle" type="button" id="converter-open"
-              aria-label="Розгорнути конвертер" title="Розгорнути конвертер"
-              aria-expanded="false" aria-controls="header-converter">
-        <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>
-    <section class="header-converter" id="header-converter" aria-label="Конвертер валют">
-      <div class="header-converter-shell">
-        <div class="header-converter-inner">
-          <h2 class="converter-title">Конвертер валют</h2>
-          <div class="converter-grid">
-            <div>
-              <label class="conv-label" for="converter-amount">Сума</label>
-              <input class="conv-input" id="converter-amount" type="text" inputmode="decimal"
-                     placeholder="Введіть суму">
-            </div>
-            <div class="conv-row">
-              <div class="conv-field">
-                <label class="conv-label" for="converter-from">З валюти</label>
-                <select class="conv-select" id="converter-from"></select>
-                <div class="conv-picker" data-picker="from">
-                  <button class="conv-picker-trigger" id="converter-from-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="converter-from-menu"></button>
-                  <ul class="conv-picker-menu" id="converter-from-menu" role="listbox" hidden></ul>
+      <section class="header-converter" id="header-converter" aria-label="Конвертер валют">
+        <div class="header-converter-shell">
+          <div class="header-converter-inner">
+            <h2 class="converter-title">Конвертер валют</h2>
+            <div class="converter-grid">
+              <div>
+                <label class="conv-label" for="converter-amount">Сума</label>
+                <input class="conv-input" id="converter-amount" type="text" inputmode="decimal"
+                       placeholder="Введіть суму">
+              </div>
+              <div class="conv-row">
+                <div class="conv-field">
+                  <label class="conv-label" for="converter-from">З валюти</label>
+                  <select class="conv-select" id="converter-from"></select>
+                  <div class="conv-picker" data-picker="from">
+                    <button class="conv-picker-trigger" id="converter-from-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="converter-from-menu"></button>
+                    <ul class="conv-picker-menu" id="converter-from-menu" role="listbox" hidden></ul>
+                  </div>
+                </div>
+                <button class="swap-btn" id="converter-swap" type="button" aria-label="Поміняти валюти місцями">⇄</button>
+                <div class="conv-field">
+                  <label class="conv-label" for="converter-to">У валюту</label>
+                  <select class="conv-select" id="converter-to"></select>
+                  <div class="conv-picker" data-picker="to">
+                    <button class="conv-picker-trigger" id="converter-to-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="converter-to-menu"></button>
+                    <ul class="conv-picker-menu" id="converter-to-menu" role="listbox" hidden></ul>
+                  </div>
                 </div>
               </div>
-              <button class="swap-btn" id="converter-swap" type="button" aria-label="Поміняти валюти місцями">⇄</button>
-              <div class="conv-field">
-                <label class="conv-label" for="converter-to">У валюту</label>
-                <select class="conv-select" id="converter-to"></select>
-                <div class="conv-picker" data-picker="to">
-                  <button class="conv-picker-trigger" id="converter-to-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="converter-to-menu"></button>
-                  <ul class="conv-picker-menu" id="converter-to-menu" role="listbox" hidden></ul>
-                </div>
+              <div class="result-box" aria-live="polite">
+                <div class="result-main" id="converter-result">—</div>
+                <div class="result-rate" id="converter-rate">Курс: —</div>
               </div>
-            </div>
-            <div class="result-box" aria-live="polite">
-              <div class="result-main" id="converter-result">—</div>
-              <div class="result-rate" id="converter-rate">Курс: —</div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </header>
-  <div class="grid" id="rates-grid">
-    <div class="loading-screen">Завантаження даних НБУ…</div>
+      </section>
+    </header>
   </div>
+
+  <main class="dashboard-main" id="dashboard-main">
+    <div class="grid" id="rates-grid">
+      <div class="loading-screen">Завантаження даних НБУ…</div>
+    </div>
+  </main>
 </div>
 
 <script type="module" src="src/app.js"></script>

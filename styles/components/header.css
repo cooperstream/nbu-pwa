@@ -1,4 +1,4 @@
-.header{background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;box-shadow:var(--shadow);margin-bottom:clamp(12px, 2.4vh, 16px)}
+.header{background:linear-gradient(180deg,rgba(31,41,55,.98),rgba(17,24,39,.98));border:1px solid var(--border);border-radius:20px;padding:18px 18px 14px;box-shadow:var(--shadow);margin-bottom:clamp(12px, 2.4vh, 16px);position:relative;z-index:21;flex:0 0 auto}
 .header-top{display:flex;align-items:center;gap:12px}
 .logo{width:44px;height:44px;border-radius:12px;flex:0 0 auto;background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.06));border:1px solid rgba(34,197,94,.22);display:flex;align-items:center;justify-content:center;font-size:24px}
 .header-titles{flex:1 1 auto;min-width:0}
