@@ -6,6 +6,14 @@
   --rate-box-w: 204px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+button,
+a,
+input,
+select,
+textarea,
+[role="button"]{
+  -webkit-tap-highlight-color: transparent;
+}
 html,body{
   background: radial-gradient(circle at top, rgba(34,197,94,0.08), transparent 30%), linear-gradient(180deg,#09111d 0%,#0b1220 100%);
   color:var(--text);
