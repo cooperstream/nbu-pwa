@@ -39,13 +39,11 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
     min-height:100dvh;
   }
   .dashboard{
-    min-height:calc(100dvh - 10px - max(2px, env(safe-area-inset-bottom)));
-    display:flex;
-    flex-direction:column;
+    min-height:auto;
+    display:block;
   }
   .grid{
     gap:6px;
-    flex:1 1 auto;
-    align-content:space-evenly;
+    align-content:start;
   }
 }
