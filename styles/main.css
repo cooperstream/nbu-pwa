@@ -32,7 +32,7 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
 
 @media(max-width:560px) and (orientation:portrait){
   body{
-    padding-top:12px;
+    padding-top:4px;
     padding-right:12px;
     padding-left:12px;
     padding-bottom:max(4px, env(safe-area-inset-bottom));
