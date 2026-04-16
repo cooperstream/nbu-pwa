@@ -12,6 +12,12 @@ const installBtn=document.getElementById("install-btn");
 const baseSwitcher=document.getElementById("base-switcher");
 
 let selectedBase="UAH";
+function syncMobileExpandedState(){
+  const hasOpenCard=Boolean(document.querySelector(".item-wrapper.active"));
+  const hasOpenConverter=headerEl?.classList.contains("converter-open");
+  document.body.classList.toggle("mobile-expanded", hasOpenCard || hasOpenConverter);
+}
+
 let ratesByCode={};
 let prevRatesByCode={};
 
@@ -24,6 +30,7 @@ const converter = createConverterUI({
   swapBtn:document.getElementById("converter-swap"),
   resultEl:document.getElementById("converter-result"),
   rateEl:document.getElementById("converter-rate"),
+  onExpandedStateChange:syncMobileExpandedState,
 });
 
 function setMsg(cc,type,visible,text){
@@ -56,6 +63,7 @@ cards = createCardsUI({
   charts,
   onCloseConverter:()=>converter.closeConverter(),
   scheduleEnsureCardVisible,
+  onExpandedStateChange:syncMobileExpandedState,
 });
 
 function updateBaseButtons(){
@@ -69,6 +77,7 @@ function renderDashboard(){
   converter.setRates(ratesByCode);
   converter.renderConverterOptions();
   converter.updateConverterResult();
+  syncMobileExpandedState();
 }
 
 async function loadDashboard(forceRefresh=false){
@@ -123,5 +132,6 @@ window.addEventListener("resize",()=>{ const active=document.querySelector(".ite
 window.addEventListener("orientationchange",()=>{ const active=document.querySelector(".item-wrapper.active"); if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),250); });
 
 converter.bindEvents();
+syncMobileExpandedState();
 updateBaseButtons();
 loadDashboard();
