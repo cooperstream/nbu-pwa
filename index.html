@@ -733,7 +733,10 @@ function buildHistorySampleDates(periodKey,end){
     const step=getAdaptive30dStepDays();
     const dates=[];
     for(let d=new Date(start);d<=endDate;d=addDays(d,step))dates.push(new Date(d));
-    if(!dates.length||!sameCalendarDay(dates[dates.length-1],endDate))dates.push(new Date(endDate));
+    const yesterday=addDays(endDate,-1);
+    if(!dates.some(date=>sameCalendarDay(date,yesterday)))dates.push(new Date(yesterday));
+    if(!dates.some(date=>sameCalendarDay(date,endDate)))dates.push(new Date(endDate));
+    dates.sort((a,b)=>a-b);
     return dates;
   }
 
