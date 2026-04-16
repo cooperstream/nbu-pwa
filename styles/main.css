@@ -27,7 +27,7 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
 ::-webkit-scrollbar-thumb:hover{background:#3b4d70}
 @media(max-width:560px){
   :root{--rate-box-w:168px}
-  .grid{gap:6px}
+  .grid{gap:10px}
 }
 
 @media(max-width:560px) and (orientation:portrait){
@@ -43,7 +43,7 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
     display:block;
   }
   .grid{
-    gap:6px;
+    gap:10px;
     align-content:start;
   }
 }
