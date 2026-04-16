@@ -1,0 +1,10 @@
+.loader-text,.chart-error,.chart-empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 10px}
+.chart-error{color:var(--danger)}
+.chart-wrap{position:relative;height:230px;display:block;opacity:0;pointer-events:none;transition:opacity .18s ease}
+.chart-wrap.ready{opacity:1;pointer-events:auto}
+.chart-wrap.loading{opacity:1;pointer-events:none}
+.chart-wrap.loading::before{content:"";position:absolute;top:50%;left:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid rgba(148,163,184,.35);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;z-index:2}
+.chart-top-indicator{position:absolute;top:6px;left:0;z-index:3;pointer-events:none;transform:translateX(-50%);background:rgba(11,18,32,.92);border:1px solid rgba(148,163,184,.28);border-radius:8px;padding:4px 8px;font-size:12px;color:#e5e7eb;white-space:nowrap;opacity:0;transition:opacity .14s ease;max-width:calc(100% - 10px);overflow:hidden;text-overflow:ellipsis}
+.chart-top-indicator.visible{opacity:1}
+@media(max-width:560px){.chart-wrap{height:180px}}
+@media (max-height:560px) and (orientation:landscape){.chart-wrap{height:140px}.item-wrapper.active .details{max-height:560px}}
