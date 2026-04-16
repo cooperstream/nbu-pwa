@@ -4,6 +4,7 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
   const customDropdownState = new Map();
   const shouldUseCustomConverterDropdown = window.matchMedia("(pointer:coarse)").matches;
   let activeCustomListbox = null;
+  let activeCustomTrigger = null;
   let converterFrom = "USD";
   let converterTo = "UAH";
   let ratesByCode = {};
@@ -51,6 +52,54 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     state.listbox.hidden=true;
     state.button.setAttribute("aria-expanded","false");
     activeCustomListbox=null;
+    activeCustomTrigger=null;
+  }
+
+  function positionCustomListbox(selectEl, triggerEl){
+    const state=customDropdownState.get(selectEl);
+    if(!state) return;
+    const { button, listbox }=state;
+    const anchorEl=triggerEl||button;
+    const triggerRect=anchorEl.getBoundingClientRect();
+    const viewportWidth=window.visualViewport?.width||window.innerWidth;
+    const viewportHeight=window.visualViewport?.height||window.innerHeight;
+    const viewportOffsetLeft=window.visualViewport?.offsetLeft||0;
+    const viewportOffsetTop=window.visualViewport?.offsetTop||0;
+    const viewportGap=8;
+    const triggerGap=4;
+    const triggerWidth=Math.max(0, Math.round(triggerRect.width));
+
+    if(triggerWidth===0) return;
+
+    listbox.style.position="fixed";
+    listbox.style.width=`${triggerWidth}px`;
+    listbox.style.left="0px";
+    listbox.style.top="0px";
+
+    const listboxHeight=Math.ceil(listbox.getBoundingClientRect().height||0);
+    const openBelow=triggerRect.bottom+triggerGap+listboxHeight <= viewportHeight-viewportGap || triggerRect.top < listboxHeight;
+
+    let top=openBelow
+      ? triggerRect.bottom+triggerGap
+      : triggerRect.top-listboxHeight-triggerGap;
+    top=Math.max(viewportGap, Math.min(top, viewportHeight-listboxHeight-viewportGap));
+
+    let left=triggerRect.left;
+    const maxLeft=viewportWidth-triggerWidth-viewportGap;
+    left=Math.max(viewportGap, Math.min(left, maxLeft));
+
+    const availableHeight=openBelow
+      ? viewportHeight-top-viewportGap
+      : triggerRect.top-viewportGap;
+
+    listbox.style.left=`${Math.round(left+viewportOffsetLeft)}px`;
+    listbox.style.top=`${Math.round(top+viewportOffsetTop)}px`;
+    listbox.style.maxHeight=`${Math.max(120, Math.floor(availableHeight))}px`;
+  }
+
+  function repositionActiveCustomListbox(){
+    if(!activeCustomListbox) return;
+    positionCustomListbox(activeCustomListbox, activeCustomTrigger);
   }
 
   function ensureCustom(selectEl){
@@ -72,7 +121,12 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       const isOpen=btn.getAttribute("aria-expanded")==="true";
       closeActiveCustomListbox();
       listbox.hidden=isOpen; btn.setAttribute("aria-expanded",String(!isOpen));
-      if(!isOpen) activeCustomListbox=selectEl;
+      if(!isOpen){
+        activeCustomListbox=selectEl;
+        activeCustomTrigger=btn;
+        positionCustomListbox(selectEl, btn);
+        requestAnimationFrame(()=>positionCustomListbox(selectEl, btn));
+      }
     });
 
     customDropdownState.set(selectEl,{button:btn,listbox});
@@ -134,6 +188,9 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       const inside=path.some((node)=>node?.classList && (node.classList.contains("conv-listbox-wrap")||node.classList.contains("conv-listbox")||node.classList.contains("conv-listbox-option")));
       if(!inside) closeActiveCustomListbox();
     });
+    window.addEventListener("resize",repositionActiveCustomListbox,{passive:true});
+    window.addEventListener("orientationchange",repositionActiveCustomListbox,{passive:true});
+    window.addEventListener("scroll",repositionActiveCustomListbox,true);
   }
 
   return {
