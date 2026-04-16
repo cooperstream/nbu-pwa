@@ -1,6 +1,6 @@
 import { CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/rates.js";
 
-export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible }){
+export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible, onExpandedStateChange }){
   function buildDelta(today,prev,baseCode){
     if(prev==null) return `<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
     const diff=today-prev,pct=(diff/prev)*100;
@@ -61,8 +61,9 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
 
     document.querySelectorAll(".item-wrapper.active").forEach((el)=>{ if(el===w)return; el.classList.remove("active"); el.querySelector(".card")?.setAttribute("aria-expanded","false"); });
 
-    if(wasOpen){ w.classList.remove("active"); btn.setAttribute("aria-expanded","false"); return; }
+    if(wasOpen){ w.classList.remove("active"); btn.setAttribute("aria-expanded","false"); onExpandedStateChange?.(); return; }
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
+    onExpandedStateChange?.();
     scheduleEnsureCardVisible(cc,60);
 
     const hasCanvas = !!document.getElementById(`chart-${cc}`);
