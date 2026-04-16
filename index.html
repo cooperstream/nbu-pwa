@@ -1634,7 +1634,7 @@ function updateConverterResult(){
     return;
   }
   const result=amount*rate;
-  converterResultEl.textContent=`${fmtAmount(amount)} ${converterFrom} = ${fmtRate(result)} ${converterTo}`;
+  converterResultEl.textContent=`${fmtAmount(amount)} ${converterFrom} = ${result.toLocaleString("uk-UA",{minimumFractionDigits:2,maximumFractionDigits:2})} ${converterTo}`;
   converterRateEl.textContent=`Курс: 1 ${converterFrom} = ${fmtRate(rate)} ${converterTo}`;
 }
 
