@@ -63,11 +63,11 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
 
     if(wasOpen){ w.classList.remove("active"); btn.setAttribute("aria-expanded","false"); return; }
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
-    scheduleEnsureCardVisible(cc,60);
+    scheduleEnsureCardVisible(cc,40);
 
     const hasCanvas = !!document.getElementById(`chart-${cc}`);
     if(hasCanvas) await charts.loadChart(cc, charts.getActivePeriod(cc));
-    scheduleEnsureCardVisible(cc,220);
+    scheduleEnsureCardVisible(cc,150);
   }
 
   async function switchPeriod(cc,pKey){
