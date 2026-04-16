@@ -1171,6 +1171,19 @@ function renderChart(cc,history,pKey,baseCode){
   const is30d=pKey==="30d";
   const is90d=pKey==="90d";
   const is1y=pKey==="1y";
+  const dayMs=24*60*60*1000;
+  const xDayOffsets=is30d
+    ? data.map(p=>Math.round(
+      (new Date(p.date.getFullYear(),p.date.getMonth(),p.date.getDate())
+      -new Date(data[0].date.getFullYear(),data[0].date.getMonth(),data[0].date.getDate()))/dayMs
+    ))
+    : [];
+  const xLabelByOffset=is30d
+    ? new Map(xDayOffsets.map((offset,idx)=>[offset,labels[idx]]))
+    : null;
+  const chartSeriesData=is30d
+    ? data.map((p,idx)=>({x:xDayOffsets[idx],y:p.rate}))
+    : values;
   const linePluginId=`hoverGuide_${cc}`;
   const topPad=42;
 
@@ -1234,7 +1247,7 @@ function renderChart(cc,history,pKey,baseCode){
     type:"line",
     data:{labels,datasets:[{
       label:`Курс (${baseCode})`,
-      data:values,
+      data:chartSeriesData,
       borderColor:trendLineColor,
       backgroundColor:trendFillColor,
       fill:true,
@@ -1270,12 +1283,22 @@ function renderChart(cc,history,pKey,baseCode){
       },
       scales:{
         x:{
+          type:is30d?"linear":"category",
+          min:is30d?xDayOffsets[0]:undefined,
+          max:is30d?xDayOffsets[xDayOffsets.length-1]:undefined,
           grid:{display:false},
           ticks:{
             color:"#94a3b8",
             maxRotation:0,
             autoSkip:true,
-            maxTicksLimit:is1y?6:(is90d?7:8)
+            maxTicksLimit:is1y?6:(is90d?7:8),
+            callback:is30d
+              ? (value)=>{
+                const rounded=Math.round(Number(value));
+                if(Math.abs(Number(value)-rounded)>1e-6)return "";
+                return xLabelByOffset?.get(rounded)||"";
+              }
+              : undefined
           },
           border:{color:"#243041"}
         },
