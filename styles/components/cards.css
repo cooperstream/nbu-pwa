@@ -1,6 +1,6 @@
 .item-wrapper{background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:border-color .2s}
 .item-wrapper.active{border-color:rgba(34,197,94,.45)}
-.card{width:100%;background:transparent;color:inherit;border:none;padding:clamp(14px, 1.8vh, 18px) 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left}
+.card{width:100%;background:transparent;color:inherit;border:none;padding:clamp(12px, 1.6vh, 16px) 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left}
 .currency-info{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}
 .currency-badge{width:46px;height:46px;border-radius:13px;flex:0 0 auto;background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(255,255,255,.04));border:1px solid rgba(34,197,94,.22);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;line-height:1}
 .currency-code{font-weight:800;font-size:17px;line-height:1.1}.currency-name{margin-top:3px;font-size:13px;color:var(--muted);line-height:1.15}
