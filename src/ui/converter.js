@@ -1,6 +1,6 @@
 import { fmtAmount, fmtRate, getConverterRate, ORDERED_CODES } from "../domain/rates.js";
 
-export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl, onExpandedStateChange }){
+export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl }){
   let converterFrom = "USD";
   let converterTo = "UAH";
   let ratesByCode = {};
@@ -148,14 +148,12 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     headerEl.classList.add("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","true");
     focusAmountInput();
-    onExpandedStateChange?.();
   }
 
   function closeConverter(){
     closeAllPickers();
     headerEl.classList.remove("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","false");
-    onExpandedStateChange?.();
   }
 
   function bindEvents(){
