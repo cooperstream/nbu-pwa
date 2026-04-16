@@ -131,11 +131,23 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     menu.style.left=`${left}px`;
   }
 
+  function focusAmountInput(){
+    if(!amountInput) return;
+    try{
+      amountInput.focus({ preventScroll:true });
+    }catch{
+      amountInput.focus();
+    }
+    const caretPosition=amountInput.value.length;
+    amountInput.setSelectionRange(caretPosition, caretPosition);
+  }
+
   function openConverter(){
     document.querySelectorAll(".item-wrapper.active").forEach((el)=>{ el.classList.remove("active"); el.querySelector('.card')?.setAttribute("aria-expanded","false"); });
     renderConverterOptions(); updateConverterResult();
     headerEl.classList.add("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","true");
+    focusAmountInput();
   }
 
   function closeConverter(){
