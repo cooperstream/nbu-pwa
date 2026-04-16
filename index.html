@@ -1279,7 +1279,8 @@ function renderChart(cc,history,pKey,baseCode){
             ticks:{
               color:"#94a3b8",
               maxRotation:0,
-              autoSkip:true,
+              stepSize:3*24*60*60*1000,
+              autoSkip:false,
               maxTicksLimit:8,
               callback:v=>new Date(Number(v)).toLocaleDateString("uk-UA",locOpts)
             }
