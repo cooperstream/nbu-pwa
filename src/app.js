@@ -5,7 +5,6 @@ import { createChartsUI } from "./ui/charts.js";
 import { createConverterUI } from "./ui/converter.js";
 
 const grid=document.getElementById("rates-grid");
-const mainScrollEl=document.getElementById("dashboard-main");
 const headerEl=document.querySelector(".header");
 const lastUpd=document.getElementById("last-updated");
 const refreshBtn=document.getElementById("refresh-btn");
@@ -36,16 +35,6 @@ function setMsg(cc,type,visible,text){
 
 function ensureCardFullyVisible(cc, smooth=true){
   const wrap=document.getElementById(`wrap-${cc}`); if(!wrap) return;
-  if(mainScrollEl){
-    const rect=wrap.getBoundingClientRect();
-    const mainRect=mainScrollEl.getBoundingClientRect();
-    if(rect.bottom > mainRect.bottom - 12){
-      mainScrollEl.scrollBy({top:rect.bottom-mainRect.bottom+12,behavior:smooth?"smooth":"auto"});
-    }else if(rect.top < mainRect.top + 10){
-      mainScrollEl.scrollBy({top:rect.top-mainRect.top-10,behavior:smooth?"smooth":"auto"});
-    }
-    return;
-  }
   const rect=wrap.getBoundingClientRect();
   if(rect.bottom > window.innerHeight - 12){ window.scrollBy({top:rect.bottom-window.innerHeight+12,behavior:smooth?"smooth":"auto"}); }
   else if(rect.top < 10){ window.scrollBy({top:rect.top-10,behavior:smooth?"smooth":"auto"}); }
