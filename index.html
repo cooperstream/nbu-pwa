@@ -550,7 +550,7 @@
           <div class="converter-grid">
             <div>
               <label class="conv-label" for="converter-amount">Сума</label>
-              <input class="conv-input" id="converter-amount" type="number" min="0" step="any" inputmode="decimal"
+              <input class="conv-input" id="converter-amount" type="text" inputmode="decimal"
                      placeholder="Введіть суму">
             </div>
             <div class="conv-row">
@@ -1628,9 +1628,54 @@ function closeConverter(){
   }
 }
 
+function formatConverterAmountInput(raw){
+  const normalized=(raw||"").replace(/\s+/g,"");
+  if(!normalized)return "";
+
+  const match=normalized.match(/^(\d*)([.,]?)(\d*)/);
+  if(!match)return "";
+
+  let [,integerPart,separator,decimalPart]=match;
+  integerPart=(integerPart||"").replace(/\D/g,"");
+  decimalPart=(decimalPart||"").replace(/\D/g,"");
+  const groupedInteger=(integerPart||"0").replace(/\B(?=(\d{3})+(?!\d))/g," ");
+
+  if(separator){
+    return `${groupedInteger}${separator}${decimalPart}`;
+  }
+  return groupedInteger;
+}
+
+function getConverterAmountNumber(){
+  const amountRaw=(converterAmountInput.value||"").replace(/\s+/g,"").replace(",",".");
+  return Number(amountRaw);
+}
+
+function handleConverterAmountInput(){
+  const input=converterAmountInput;
+  if(!input)return;
+  const caret=input.selectionStart??0;
+  const digitsBeforeCaret=(input.value.slice(0,caret).match(/\d/g)||[]).length;
+  const formattedValue=formatConverterAmountInput(input.value);
+  input.value=formattedValue;
+
+  let nextCaret=formattedValue.length;
+  if(digitsBeforeCaret>0){
+    let seenDigits=0;
+    for(let i=0;i<formattedValue.length;i++){
+      if(/\d/.test(formattedValue[i]))seenDigits++;
+      if(seenDigits>=digitsBeforeCaret){
+        nextCaret=i+1;
+        break;
+      }
+    }
+  }
+  input.setSelectionRange(nextCaret,nextCaret);
+  updateConverterResult();
+}
+
 function updateConverterResult(){
-  const amountRaw=(converterAmountInput.value||"").replace(",",".");
-  const amount=Number(amountRaw);
+  const amount=getConverterAmountNumber();
   const codes=getConverterCodes();
   if(!codes.length || !Number.isFinite(amount) || amount<0){
     converterResultEl.textContent="Введіть коректну суму";
@@ -1738,7 +1783,7 @@ converterOpenBtn?.addEventListener("click",()=>{
   }
   openConverter();
 });
-converterAmountInput?.addEventListener("input",updateConverterResult);
+converterAmountInput?.addEventListener("input",handleConverterAmountInput);
 converterFromSelect?.addEventListener("change",()=>{
   converterFrom=converterFromSelect.value;
   if(converterFrom===converterTo){
