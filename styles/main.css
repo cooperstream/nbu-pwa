@@ -29,3 +29,12 @@ body{padding:16px;padding-bottom:max(16px, env(safe-area-inset-bottom));display:
   :root{--rate-box-w:168px}
   .grid{gap:10px}
 }
+
+@media(max-width:560px) and (orientation:portrait){
+  body{
+    padding-top:12px;
+    padding-right:12px;
+    padding-left:12px;
+    padding-bottom:max(8px, env(safe-area-inset-bottom));
+  }
+}
