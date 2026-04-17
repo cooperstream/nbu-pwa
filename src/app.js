@@ -25,6 +25,7 @@ const converter = createConverterUI({
   swapBtn:document.getElementById("converter-swap"),
   resultEl:document.getElementById("converter-result"),
   rateEl:document.getElementById("converter-rate"),
+  onCloseActiveCards:()=>updateBaseButtons(),
 });
 
 function setMsg(cc,type,visible,text){
