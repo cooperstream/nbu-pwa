@@ -54,6 +54,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
   function isSparklineDisabled(){
     return window.matchMedia("(max-width: 560px)").matches;
   }
+  let sparklineViewportDisabled=isSparklineDisabled();
 
   function renderChart(cc,history,pKey,baseCode){
     const Chart = window.Chart;
@@ -218,6 +219,17 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     sparkPrefetchTimer=null;
   }
 
+  function clearPendingSparklineJobs(codes){
+    clearSparkPrefetchTimer();
+    queuedSparkCodes.clear();
+    queuedSparkRequest=null;
+    sparkPrefetchPromise=null;
+    (codes||[]).forEach((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(el) el.dataset.sparkLoading="0";
+    });
+  }
+
   function queueSparklinePrefetch(codes,prefetchKey){
     if(!codes.length) return Promise.resolve();
     codes.forEach((cc)=>queuedSparkCodes.add(cc));
@@ -319,6 +331,21 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     return observeSparklineTargets(getDisplayCodes()||[],prefetchKey);
   }
 
+  function handleViewportModeChange(displayCodes,prefetchKey="default"){
+    const nextDisabled=isSparklineDisabled();
+    if(nextDisabled===sparklineViewportDisabled){
+      if(nextDisabled) return Promise.resolve();
+      return observeSparklineTargets(displayCodes||[],prefetchKey);
+    }
+    sparklineViewportDisabled=nextDisabled;
+    if(nextDisabled){
+      disconnectSparklineObserver();
+      clearPendingSparklineJobs(displayCodes);
+      return Promise.resolve();
+    }
+    return observeSparklineTargets(displayCodes||[],prefetchKey);
+  }
+
   function resetChartState(){
     Object.values(chartInstances).forEach((c)=>{ try{c.destroy();}catch(_e){} });
     Object.keys(chartInstances).forEach((k)=>delete chartInstances[k]);
@@ -329,6 +356,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     sparkPrefetchPromise=null;
     sparkPrefetchedKey="";
     queuedSparkRequest=null;
+    sparklineViewportDisabled=isSparklineDisabled();
   }
 
   function disposeCard(cc){
@@ -365,5 +393,5 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     if(openCode) loadChart(openCode,activePeriod[openCode]||"30d");
   }
 
-  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, refreshForBaseChange, disposeCard, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
+  return { loadChart, switchPeriod, launchSparklinesPrefetch, handleViewportModeChange, resetChartState, refreshForBaseChange, disposeCard, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
 }
