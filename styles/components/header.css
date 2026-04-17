@@ -1,24 +1,4 @@
-.header{
-  position:sticky;
-  top:0;
-  z-index:30;
-  background:linear-gradient(180deg,rgba(31,41,55,.98),rgba(17,24,39,.98));
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:23px 18px 14px;
-  box-shadow:var(--shadow);
-  margin-bottom:clamp(12px, 2.4vh, 16px);
-}
-.header::after{
-  content:"";
-  position:absolute;
-  left:14px;
-  right:14px;
-  bottom:0;
-  height:1px;
-  background:linear-gradient(90deg,rgba(148,163,184,.08),rgba(148,163,184,.3),rgba(148,163,184,.08));
-  pointer-events:none;
-}
+.header{background:linear-gradient(180deg,rgba(31,41,55,.96),rgba(17,24,39,.96));border:1px solid var(--border);border-radius:20px;padding:23px 18px 14px;box-shadow:var(--shadow);margin-bottom:clamp(12px, 2.4vh, 16px)}
 .header-top{display:flex;align-items:center;gap:12px}
 .logo{width:44px;height:44px;border-radius:12px;flex:0 0 auto;background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.06));border:1px solid rgba(34,197,94,.22);display:flex;align-items:center;justify-content:center;font-size:24px}
 .header-titles{flex:1 1 auto;min-width:0}

@@ -38,9 +38,8 @@ function setMsg(cc,type,visible,text){
 function ensureCardFullyVisible(cc, smooth=true){
   const wrap=document.getElementById(`wrap-${cc}`); if(!wrap) return;
   const rect=wrap.getBoundingClientRect();
-  const headerOffset=(headerEl?.getBoundingClientRect().height||0)+10;
   if(rect.bottom > window.innerHeight - 12){ window.scrollBy({top:rect.bottom-window.innerHeight+12,behavior:smooth?"smooth":"auto"}); }
-  else if(rect.top < headerOffset){ window.scrollBy({top:rect.top-headerOffset,behavior:smooth?"smooth":"auto"}); }
+  else if(rect.top < 10){ window.scrollBy({top:rect.top-10,behavior:smooth?"smooth":"auto"}); }
 }
 function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCardFullyVisible(cc),delay); }
 
