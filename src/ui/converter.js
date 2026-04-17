@@ -53,6 +53,20 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     return formatted.length;
   }
 
+  function getCaretFromNumericContext(formatted, { digitsBefore, hasSeparatorBeforeCaret, fractionDigitsBeforeCaret }){
+    if(!hasSeparatorBeforeCaret) return getCaretFromDigits(formatted, digitsBefore);
+    const separatorIndex=formatted.search(/[.,]/);
+    if(separatorIndex<0) return getCaretFromDigits(formatted, digitsBefore);
+    if(fractionDigitsBeforeCaret<=0) return separatorIndex+1;
+
+    let seenFractionDigits=0;
+    for(let i=separatorIndex+1;i<formatted.length;i++){
+      if(/\d/.test(formatted[i])) seenFractionDigits++;
+      if(seenFractionDigits>=fractionDigitsBeforeCaret) return i+1;
+    }
+    return formatted.length;
+  }
+
   function restoreInputCaret(input, nextCaret){
     const safeCaret=Math.max(0, Math.min(nextCaret, input.value.length));
     const applyCaret=()=>{
@@ -184,10 +198,21 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     converterOpenBtn?.addEventListener("click",()=> headerEl.classList.contains("converter-open") ? closeConverter() : openConverter());
     amountInput?.addEventListener("input",()=>{
       const caret=amountInput.selectionStart??0;
-      const digitsBefore=(amountInput.value.slice(0,caret).match(/\d/g)||[]).length;
-      const formatted=formatConverterAmountInput(amountInput.value);
+      const rawValue=amountInput.value;
+      const valueBeforeCaret=rawValue.slice(0,caret);
+      const digitsBefore=(valueBeforeCaret.match(/\d/g)||[]).length;
+      const separatorMatch=valueBeforeCaret.match(/[.,]/);
+      const hasSeparatorBeforeCaret=Boolean(separatorMatch);
+      const fractionDigitsBeforeCaret=hasSeparatorBeforeCaret
+        ? (valueBeforeCaret.slice((separatorMatch.index??-1)+1).match(/\d/g)||[]).length
+        : 0;
+      const formatted=formatConverterAmountInput(rawValue);
       amountInput.value=formatted;
-      const nextCaret=getCaretFromDigits(formatted, digitsBefore);
+      const nextCaret=getCaretFromNumericContext(formatted, {
+        digitsBefore,
+        hasSeparatorBeforeCaret,
+        fractionDigitsBeforeCaret,
+      });
       restoreInputCaret(amountInput, nextCaret);
       updateConverterResult();
     });
