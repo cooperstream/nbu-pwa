@@ -1,5 +1,5 @@
 import { BASE_CODES, FOREIGN_CODES, getDisplayPrevMap, getDisplayRates, toRateMap } from "./domain/rates.js";
-import { getCurrentRates, getDisplayHistory, getYesterdayRates } from "./services/nbu-api.js";
+import { getCurrentRates, getDisplayHistory, getDisplayHistoriesBatch, getYesterdayRates } from "./services/nbu-api.js";
 import { createCardsUI } from "./ui/cards.js";
 import { createChartsUI } from "./ui/charts.js";
 import { createConverterUI } from "./ui/converter.js";
@@ -45,6 +45,7 @@ function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCard
 let cards;
 const charts = createChartsUI({
   getDisplayHistory,
+  getDisplayHistoriesBatch,
   getSelectedBase:()=>selectedBase,
   scheduleEnsureCardVisible,
   setMsg,
@@ -67,7 +68,7 @@ function renderDashboard(){
   charts.resetChartState();
   cards.renderCards(getDisplayRates(selectedBase,ratesByCode));
   // Sparkline prefetch is deferred to idle time so it does not compete with first paint.
-  charts.launchSparklinesPrefetch(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase),selectedBase);
+  charts.launchSparklinesPrefetch(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase),`base:${selectedBase}`);
   converter.setRates(ratesByCode);
   converter.renderConverterOptions();
   converter.updateConverterResult();
@@ -123,8 +124,10 @@ baseSwitcher?.addEventListener("click",(e)=>{
   if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase) return;
   selectedBase=nextBase;
   updateBaseButtons();
-  renderDashboard();
-  refreshDeltaCards();
+  const nextDisplayRates=getDisplayRates(selectedBase,ratesByCode);
+  cards.updateCardsBaseData(nextDisplayRates);
+  charts.refreshForBaseChange(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase));
+  converter.updateConverterResult();
 });
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden) return;
