@@ -7,6 +7,9 @@ let sparkPrefetchPromise = null;
 let sparkPrefetchTimer = null;
 let sparkPrefetchedKey = "";
 let queuedSparkRequest = null;
+let sparkObserver = null;
+const observedSparkTargets = new Map();
+const queuedSparkCodes = new Set();
 let chartJsLoadPromise = null;
 
 export function buildSparkline(values,W=68,H=30){
@@ -48,6 +51,10 @@ function ensureChartJsLoaded(){
 }
 
 export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+  function isSparklineDisabled(){
+    return window.matchMedia("(max-width: 560px)").matches;
+  }
+
   function renderChart(cc,history,pKey,baseCode){
     const Chart = window.Chart;
     const cwrap=document.getElementById(`cwrap-${cc}`);
@@ -157,29 +164,41 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     scheduleEnsureCardVisible(cc,220);
   }
 
-  async function runPrefetchSparklines(getDisplayCodes){
-    if(window.matchMedia("(max-width: 560px)").matches) return;
-    const baseCode=getSelectedBase();
-    const visibleCodes=(getDisplayCodes()||[]).filter((cc)=>{
+  async function runPrefetchSparklines(codes,baseCode){
+    if(isSparklineDisabled()) return;
+    const requestedCodes=(codes||[]).filter((cc)=>{
       const el=document.getElementById(`spark-${cc}`);
-      if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") return false;
-      const rect=el.getBoundingClientRect();
-      return rect.bottom>=-120&&rect.top<=window.innerHeight+120;
+      return !!el && !el.classList.contains("ready") && el.dataset.sparkReady!=="1" && el.dataset.sparkLoading!=="1";
     });
-    if(!visibleCodes.length) return;
+    if(!requestedCodes.length) return;
+    requestedCodes.forEach((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(el) el.dataset.sparkLoading="1";
+    });
     try{
-      // Batch sparkline warmup reuses one history build flow for the whole visible set.
-      const histories=await getDisplayHistoriesBatch(visibleCodes,"30d",baseCode);
-      visibleCodes.forEach((cc)=>{
+      // Batch sparkline warmup reuses one history build flow for the whole intersected set.
+      const histories=await getDisplayHistoriesBatch(requestedCodes,"30d",baseCode);
+      requestedCodes.forEach((cc)=>{
         const el=document.getElementById(`spark-${cc}`);
         const h=histories[cc]||[];
-        if(!el||h.length<2) return;
+        if(!el) return;
+        el.dataset.sparkLoading="0";
+        if(getSelectedBase()!==baseCode || h.length<2) return;
         el.innerHTML=buildSparkline(h.map((p)=>p.rate));
         el.classList.add("ready");
         el.dataset.sparkReady="1";
+        // Stop observing once this sparkline is rendered to avoid duplicate jobs.
+        if(sparkObserver){
+          sparkObserver.unobserve(el);
+          observedSparkTargets.delete(cc);
+        }
       });
     }catch(_e){
       // Keep prefetch best-effort.
+      requestedCodes.forEach((cc)=>{
+        const el=document.getElementById(`spark-${cc}`);
+        if(el) el.dataset.sparkLoading="0";
+      });
     }
   }
 
@@ -199,20 +218,22 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     sparkPrefetchTimer=null;
   }
 
-  function launchSparklinesPrefetch(getDisplayCodes,prefetchKey="default"){
-    if(prefetchKey===sparkPrefetchedKey && !sparkPrefetchPromise && !queuedSparkRequest) return Promise.resolve();
-
+  function queueSparklinePrefetch(codes,prefetchKey){
+    if(!codes.length) return Promise.resolve();
+    codes.forEach((cc)=>queuedSparkCodes.add(cc));
     if(sparkPrefetchPromise){
-      queuedSparkRequest={ getDisplayCodes, prefetchKey };
+      queuedSparkRequest={ prefetchKey };
       return sparkPrefetchPromise;
     }
-
     clearSparkPrefetchTimer();
     sparkPrefetchPromise=new Promise((resolve)=>{
       scheduleSparkPrefetch(async()=>{
         sparkPrefetchTimer=null;
+        const pendingCodes=[...queuedSparkCodes];
+        queuedSparkCodes.clear();
+        const baseCode=getSelectedBase();
         try{
-          await runPrefetchSparklines(getDisplayCodes);
+          await runPrefetchSparklines(pendingCodes,baseCode);
           sparkPrefetchedKey=prefetchKey;
         }catch(_e){}
         resolve();
@@ -220,13 +241,82 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     }).finally(()=>{
       sparkPrefetchPromise=null;
       if(queuedSparkRequest){
-        const next=queuedSparkRequest;
+        const nextPrefetchKey=queuedSparkRequest.prefetchKey;
         queuedSparkRequest=null;
-        launchSparklinesPrefetch(next.getDisplayCodes,next.prefetchKey);
+        if(queuedSparkCodes.size){
+          queueSparklinePrefetch([...queuedSparkCodes],nextPrefetchKey);
+        }
       }
     });
 
     return sparkPrefetchPromise;
+  }
+
+  function disconnectSparklineObserver(){
+    if(sparkObserver){
+      sparkObserver.disconnect();
+      sparkObserver=null;
+    }
+    observedSparkTargets.clear();
+    queuedSparkCodes.clear();
+  }
+
+  function queueVisibleFallbackSparklineTargets(codes,prefetchKey){
+    const visibleCodes=(codes||[]).filter((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1"||el.dataset.sparkLoading==="1") return false;
+      const rect=el.getBoundingClientRect();
+      return rect.bottom>=-120&&rect.top<=window.innerHeight+220;
+    });
+    return queueSparklinePrefetch(visibleCodes,prefetchKey);
+  }
+
+  function initSparklineObserver(prefetchKey){
+    if(isSparklineDisabled()){
+      disconnectSparklineObserver();
+      return null;
+    }
+    if(sparkObserver) return sparkObserver;
+    if(typeof IntersectionObserver!=="function") return null;
+
+    sparkObserver=new IntersectionObserver((entries)=>{
+      const intersectedCodes=entries.filter((entry)=>entry.isIntersecting||entry.intersectionRatio>0).map((entry)=>{
+        const target=entry.target;
+        return target.id.replace("spark-","");
+      });
+      if(!intersectedCodes.length) return;
+      queueSparklinePrefetch(intersectedCodes,prefetchKey);
+    },{ root:null, rootMargin:"180px 0px 220px 0px", threshold:0.01 });
+
+    return sparkObserver;
+  }
+
+  function observeSparklineTargets(codes,prefetchKey){
+    const observer=initSparklineObserver(prefetchKey);
+    const nextCodes=new Set(codes||[]);
+
+    observedSparkTargets.forEach((el,cc)=>{
+      if(nextCodes.has(cc) && el.isConnected) return;
+      observer?.unobserve(el);
+      observedSparkTargets.delete(cc);
+    });
+
+    if(!observer){
+      return queueVisibleFallbackSparklineTargets(codes,prefetchKey);
+    }
+
+    nextCodes.forEach((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") return;
+      if(observedSparkTargets.get(cc)===el) return;
+      observer.observe(el);
+      observedSparkTargets.set(cc,el);
+    });
+    return Promise.resolve();
+  }
+
+  function launchSparklinesPrefetch(getDisplayCodes,prefetchKey="default"){
+    return observeSparklineTargets(getDisplayCodes()||[],prefetchKey);
   }
 
   function resetChartState(){
@@ -235,6 +325,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     Object.keys(activePeriod).forEach((k)=>delete activePeriod[k]);
     Object.keys(chartRequestTokens).forEach((k)=>delete chartRequestTokens[k]);
     clearSparkPrefetchTimer();
+    disconnectSparklineObserver();
     sparkPrefetchPromise=null;
     sparkPrefetchedKey="";
     queuedSparkRequest=null;
@@ -248,6 +339,12 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     }
     delete activePeriod[cc];
     delete chartRequestTokens[cc];
+    const observedEl=observedSparkTargets.get(cc);
+    if(observedEl&&sparkObserver){
+      sparkObserver.unobserve(observedEl);
+    }
+    observedSparkTargets.delete(cc);
+    queuedSparkCodes.delete(cc);
   }
 
   function resetSparklineMarkers(codes){
@@ -256,6 +353,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
       if(!el) return;
       el.classList.remove("ready");
       el.dataset.sparkReady="0";
+      el.dataset.sparkLoading="0";
       el.innerHTML="";
     });
   }
