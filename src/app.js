@@ -1,5 +1,11 @@
+import "../styles/main.css";
+import "../styles/components/header.css";
+import "../styles/components/cards.css";
+import "../styles/components/converter.css";
+import "../styles/components/chart.css";
+
 import { BASE_CODES, FOREIGN_CODES, getDisplayPrevMap, getDisplayRates, toRateMap } from "./domain/rates.js";
-import { getCurrentRates, getDisplayHistory, getYesterdayRates } from "./services/nbu-api.js";
+import { getCurrentRates, getDisplayHistory, getDisplayHistoriesBatch, getYesterdayRates } from "./services/nbu-api.js";
 import { createCardsUI } from "./ui/cards.js";
 import { createChartsUI } from "./ui/charts.js";
 import { createConverterUI } from "./ui/converter.js";
@@ -45,6 +51,7 @@ function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCard
 let cards;
 const charts = createChartsUI({
   getDisplayHistory,
+  getDisplayHistoriesBatch,
   getSelectedBase:()=>selectedBase,
   scheduleEnsureCardVisible,
   setMsg,
@@ -63,11 +70,14 @@ function updateBaseButtons(){
   baseSwitcher?.querySelectorAll(".base-btn").forEach((btn)=>btn.classList.toggle("active",btn.dataset.base===selectedBase));
 }
 
+function launchSparkPrefetch(){
+  charts.launchSparklinesPrefetch(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase),selectedBase);
+}
+
 function renderDashboard(){
   charts.resetChartState();
   cards.renderCards(getDisplayRates(selectedBase,ratesByCode));
-  // Sparkline prefetch is deferred to idle time so it does not compete with first paint.
-  charts.launchSparklinesPrefetch(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase),selectedBase);
+  launchSparkPrefetch();
   converter.setRates(ratesByCode);
   converter.renderConverterOptions();
   converter.updateConverterResult();
@@ -77,15 +87,26 @@ function refreshDeltaCards(){
   cards.updateCardDeltas(getDisplayRates(selectedBase,ratesByCode));
 }
 
+async function applyBaseChange(nextBase){
+  selectedBase=nextBase;
+  updateBaseButtons();
+  const displayRates=getDisplayRates(selectedBase,ratesByCode);
+
+  // Patch in place: keep most card DOM and chart/sparkline state, avoid full dashboard rebuild.
+  cards.patchCardsForBaseChange(displayRates);
+  await charts.refreshForBaseChange(displayRates.map((r)=>r.cc));
+  launchSparkPrefetch();
+
+  converter.setRates(ratesByCode);
+  converter.updateConverterResult();
+}
+
 function loadYesterdayRatesInBackground(loadToken){
-  // Deferred yesterday update: do not block the first dashboard render.
   getYesterdayRates().then((yesterdayRaw)=>{
     if(loadToken!==dashboardLoadToken) return;
     prevRatesByCode=toRateMap((yesterdayRaw||[]).filter((i)=>FOREIGN_CODES.includes(i.cc)));
     refreshDeltaCards();
-  }).catch(()=>{
-    // Keep dashboard interactive even if yesterday rates are unavailable.
-  });
+  }).catch(()=>{});
 }
 
 async function loadDashboard(forceRefresh=false){
@@ -121,9 +142,7 @@ baseSwitcher?.addEventListener("click",(e)=>{
   if(!btn) return;
   const nextBase=btn.dataset.base;
   if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase) return;
-  selectedBase=nextBase;
-  updateBaseButtons();
-  renderDashboard();
+  applyBaseChange(nextBase);
   refreshDeltaCards();
 });
 document.addEventListener("visibilitychange",()=>{
