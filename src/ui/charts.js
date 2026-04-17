@@ -47,7 +47,35 @@ function ensureChartJsLoaded(){
   return chartJsLoadPromise;
 }
 
-export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+  const displayHistoryBatchCache = new Map();
+  function cacheKey(baseCode,pKey,codes){
+    return `${baseCode}|${pKey}|${[...codes].sort().join(",")}`;
+  }
+
+  async function getDisplayHistoryWithBatch(cc,pKey,baseCode){
+    const singleCacheKey=cacheKey(baseCode,pKey,[cc]);
+    if(displayHistoryBatchCache.has(singleCacheKey)) return displayHistoryBatchCache.get(singleCacheKey)[cc]||[];
+
+    const fallback=await getDisplayHistory(cc,pKey,baseCode);
+    displayHistoryBatchCache.set(singleCacheKey,{[cc]:fallback});
+    return fallback;
+  }
+
+  async function getDisplayHistoriesCached(codes,pKey,baseCode){
+    const cKey=cacheKey(baseCode,pKey,codes);
+    if(displayHistoryBatchCache.has(cKey)) return displayHistoryBatchCache.get(cKey);
+    if(typeof getDisplayHistoriesBatch!=="function"){
+      const pairs=await Promise.all(codes.map(async(cc)=>[cc,await getDisplayHistoryWithBatch(cc,pKey,baseCode)]));
+      const next=Object.fromEntries(pairs);
+      displayHistoryBatchCache.set(cKey,next);
+      return next;
+    }
+    const batch=await getDisplayHistoriesBatch(codes,pKey,baseCode);
+    displayHistoryBatchCache.set(cKey,batch);
+    return batch;
+  }
+
   function renderChart(cc,history,pKey,baseCode){
     const Chart = window.Chart;
     const cwrap=document.getElementById(`cwrap-${cc}`);
@@ -136,7 +164,7 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
 
     try{
       await ensureChartJsLoaded();
-      const history=await getDisplayHistory(cc,pKey,getSelectedBase());
+      const history=await getDisplayHistoryWithBatch(cc,pKey,getSelectedBase());
       if(chartRequestTokens[cc]!==requestToken) return;
       if(activePeriod[cc]!==pKey) return;
       if(getOpenCardCode()!==cc) return;
@@ -157,20 +185,28 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     scheduleEnsureCardVisible(cc,220);
   }
 
-  async function runPrefetchSparklines(getDisplayCodes){
+  async function runPrefetchSparklines(getDisplayCodes,forceRebuild=false){
     if(window.matchMedia("(max-width: 560px)").matches) return;
     const codes=getDisplayCodes();
+    if(!codes.length) return;
+    const baseCode=getSelectedBase();
+    const historiesByCode=await getDisplayHistoriesCached(codes,"30d",baseCode);
     let failures=0;
     const queue=[...codes];
     async function worker(){
       while(queue.length && failures<3){
         const cc=queue.shift();
         const el=document.getElementById(`spark-${cc}`);
-        if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") continue;
+        if(!el) continue;
+        if(forceRebuild){
+          el.classList.remove("ready");
+          delete el.dataset.sparkReady;
+        }
+        if(el.classList.contains("ready")||el.dataset.sparkReady==="1") continue;
         const rect=el.getBoundingClientRect();
         if(!(rect.bottom>=-120&&rect.top<=window.innerHeight+120)) continue;
         try{
-          const h=await getDisplayHistory(cc,"30d",getSelectedBase());
+          const h=historiesByCode[cc]||[];
           if(h.length<2) continue;
           el.innerHTML=buildSparkline(h.map((p)=>p.rate));
           el.classList.add("ready");
@@ -197,11 +233,11 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     sparkPrefetchTimer=null;
   }
 
-  function launchSparklinesPrefetch(getDisplayCodes,prefetchKey="default"){
+  function launchSparklinesPrefetch(getDisplayCodes,prefetchKey="default",forceRebuild=false){
     if(prefetchKey===sparkPrefetchedKey && !sparkPrefetchPromise && !queuedSparkRequest) return Promise.resolve();
 
     if(sparkPrefetchPromise){
-      queuedSparkRequest={ getDisplayCodes, prefetchKey };
+      queuedSparkRequest={ getDisplayCodes, prefetchKey, forceRebuild };
       return sparkPrefetchPromise;
     }
 
@@ -210,7 +246,7 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
       scheduleSparkPrefetch(async()=>{
         sparkPrefetchTimer=null;
         try{
-          await runPrefetchSparklines(getDisplayCodes);
+          await runPrefetchSparklines(getDisplayCodes,forceRebuild);
           sparkPrefetchedKey=prefetchKey;
         }catch(_e){}
         resolve();
@@ -220,11 +256,24 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
       if(queuedSparkRequest){
         const next=queuedSparkRequest;
         queuedSparkRequest=null;
-        launchSparklinesPrefetch(next.getDisplayCodes,next.prefetchKey);
+        launchSparklinesPrefetch(next.getDisplayCodes,next.prefetchKey,next.forceRebuild);
       }
     });
 
     return sparkPrefetchPromise;
+  }
+
+  function invalidateDisplayHistoryCache(){
+    displayHistoryBatchCache.clear();
+  }
+
+  async function refreshForBaseChange(getDisplayCodes){
+    invalidateDisplayHistoryCache();
+    sparkPrefetchedKey="";
+    await launchSparklinesPrefetch(getDisplayCodes,`base:${getSelectedBase()}`,true);
+    const openCardCode=getOpenCardCode();
+    if(!openCardCode) return;
+    await loadChart(openCardCode,getActivePeriod(openCardCode));
   }
 
   function resetChartState(){
@@ -235,7 +284,15 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     sparkPrefetchPromise=null;
     sparkPrefetchedKey="";
     queuedSparkRequest=null;
+    invalidateDisplayHistoryCache();
   }
 
-  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
+  return {
+    loadChart,
+    switchPeriod,
+    launchSparklinesPrefetch,
+    refreshForBaseChange,
+    resetChartState,
+    getActivePeriod:(cc)=>activePeriod[cc]||"30d",
+  };
 }
