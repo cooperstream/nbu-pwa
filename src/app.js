@@ -61,7 +61,13 @@ cards = createCardsUI({
 });
 
 function updateBaseButtons(){
-  baseSwitcher?.querySelectorAll(".base-btn").forEach((btn)=>btn.classList.toggle("active",btn.dataset.base===selectedBase));
+  const openCardCode=cards?.getOpenCardCode?.()||null;
+  baseSwitcher?.querySelectorAll(".base-btn").forEach((btn)=>{
+    const isActive=btn.dataset.base===selectedBase;
+    const isCloseTarget=!isActive&&openCardCode&&btn.dataset.base===openCardCode;
+    btn.classList.toggle("active",isActive);
+    btn.classList.toggle("is-close-target",Boolean(isCloseTarget));
+  });
 }
 
 function renderDashboard(){
@@ -126,6 +132,10 @@ async function loadDashboard(forceRefresh=false){
 }
 
 refreshBtn.addEventListener("click",()=>loadDashboard(true));
+grid.addEventListener("click",(e)=>{
+  if(!e.target.closest(".card")) return;
+  requestAnimationFrame(updateBaseButtons);
+});
 baseSwitcher?.addEventListener("click",(e)=>{
   const btn=e.target.closest(".base-btn");
   if(!btn) return;
@@ -137,6 +147,7 @@ baseSwitcher?.addEventListener("click",(e)=>{
   const nextDisplayRates=getDisplayRates(selectedBase,ratesByCode);
   cards.syncCards(nextDisplayRates);
   charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
+  updateBaseButtons();
   // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
   if(prevBase!==selectedBase){
     converter.updateConverterResult();
