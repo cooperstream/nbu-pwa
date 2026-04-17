@@ -1,6 +1,6 @@
 import { fmtAmount, fmtRate, getConverterRate, ORDERED_CODES } from "../domain/rates.js";
 
-export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl }){
+export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl, onCloseActiveCards }){
   let converterFrom = "USD";
   let converterTo = "UAH";
   let ratesByCode = {};
@@ -181,7 +181,13 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
   }
 
   function openConverter(){
-    document.querySelectorAll(".item-wrapper.active").forEach((el)=>{ el.classList.remove("active"); el.querySelector('.card')?.setAttribute("aria-expanded","false"); });
+    let closedActiveCards=false;
+    document.querySelectorAll(".item-wrapper.active").forEach((el)=>{
+      closedActiveCards=true;
+      el.classList.remove("active");
+      el.querySelector('.card')?.setAttribute("aria-expanded","false");
+    });
+    if(closedActiveCards) onCloseActiveCards?.();
     renderConverterOptions(); updateConverterResult();
     headerEl.classList.add("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","true");
