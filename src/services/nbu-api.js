@@ -2,6 +2,7 @@ import { addDays, buildHistorySampleDates, fmtYMD, toDayKey } from "../domain/ra
 import { cGet, cSet, keyHist, keyHistEmpty, keyHistLegacy, keyToday, TTL } from "./cache.js";
 
 const NBU_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
+const dayRatesInflight = new Map();
 
 export function buildNbuRatesUrl({date,valcode}){
   const params = new URLSearchParams({ json: "" });
@@ -28,6 +29,54 @@ export async function fetchHistoryPoint(url,timeoutMs=6000){
     if(name==="TimeoutError"||name==="AbortError") return {ok:false,kind:"timeout"};
     return {ok:false,kind:"http"};
   }
+}
+
+function keyHistDay(ymd){
+  return `hist_day_${ymd}`;
+}
+
+function normalizeRatesByCode(raw){
+  if(!Array.isArray(raw)||!raw.length) return null;
+  const byCode={};
+  for(const item of raw){
+    const code=item?.cc;
+    const rate=Number(item?.rate);
+    if(!code||!Number.isFinite(rate)) continue;
+    byCode[code]=rate;
+  }
+  return Object.keys(byCode).length?byCode:null;
+}
+
+async function fetchDayRates(ymd,timeoutMs=6000){
+  const url=buildNbuRatesUrl({date:ymd});
+  try{
+    const r=await fetch(url,{signal:AbortSignal.timeout(timeoutMs)});
+    if(!r.ok) return {ok:false,kind:"http",status:r.status};
+    const raw=await r.json();
+    const ratesByCode=normalizeRatesByCode(raw);
+    if(!ratesByCode) return {ok:false,kind:"empty"};
+    return {ok:true,ratesByCode};
+  }catch(err){
+    const name=err?.name||"";
+    if(name==="TimeoutError"||name==="AbortError") return {ok:false,kind:"timeout"};
+    return {ok:false,kind:"http"};
+  }
+}
+
+async function getRatesByDate(ymd,timeoutMs=6000){
+  const ttlByDate=ymd===fmtYMD(new Date())?TTL.today:TTL.past;
+  const cKey=keyHistDay(ymd);
+  const cached=cGet(cKey,ttlByDate);
+  if(cached&&typeof cached==="object") return {ok:true,ratesByCode:cached};
+
+  if(dayRatesInflight.has(ymd)) return dayRatesInflight.get(ymd);
+
+  const pending=fetchDayRates(ymd,timeoutMs).then((res)=>{
+    if(res.ok) cSet(cKey,res.ratesByCode);
+    return res;
+  }).finally(()=>dayRatesInflight.delete(ymd));
+  dayRatesInflight.set(ymd,pending);
+  return pending;
 }
 
 export async function getCurrentRates(forceRefresh=false){
@@ -80,12 +129,15 @@ export async function getHistory(cc,periodKey){
       while(cursor<indexes.length){
         const idx=indexes[cursor++];
         const d=dates[idx];
-        const url=buildNbuRatesUrl({valcode:cc,date:fmtYMD(d)});
-        const res=await fetchHistoryPoint(url,timeoutMs);
-        if(res.ok){ result[idx]={date:d,rate:res.rate}; continue; }
+        const ymd=fmtYMD(d);
+        const dayRes=await getRatesByDate(ymd,timeoutMs);
+        if(dayRes.ok && Number.isFinite(dayRes.ratesByCode?.[cc])){
+          result[idx]={date:d,rate:Number(dayRes.ratesByCode[cc])};
+          continue;
+        }
         stats.failed++;
-        if(res.kind==="timeout") stats.timeout++;
-        else if(res.kind==="empty") stats.empty++;
+        if(dayRes.kind==="timeout") stats.timeout++;
+        else if(dayRes.kind==="empty") stats.empty++;
         else stats.http++;
       }
     }
