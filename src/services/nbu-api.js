@@ -1,5 +1,5 @@
 import { addDays, buildHistorySampleDates, fmtYMD, toDayKey } from "../domain/rates.js";
-import { cGet, cSet, keyHist, keyHistDay, keyHistEmpty, keyHistLegacy, keyToday, TTL } from "./cache.js";
+import { cGet, cSet, keyHist, keyHistEmpty, keyHistLegacy, keyToday, TTL } from "./cache.js";
 
 const NBU_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
 
@@ -23,24 +23,6 @@ export async function fetchHistoryPoint(url,timeoutMs=6000){
     const raw=await r.json();
     if(!Array.isArray(raw)||!raw.length||!raw[0]?.rate) return {ok:false,kind:"empty"};
     return {ok:true,rate:Number(raw[0].rate)};
-  }catch(err){
-    const name=err?.name||"";
-    if(name==="TimeoutError"||name==="AbortError") return {ok:false,kind:"timeout"};
-    return {ok:false,kind:"http"};
-  }
-}
-
-export async function fetchDaySnapshot(date,timeoutMs=6000){
-  const ymd=fmtYMD(date);
-  const cached=cGet(keyHistDay(ymd),TTL.hDay);
-  if(Array.isArray(cached)&&cached.length>0) return {ok:true,data:cached,fromCache:true};
-  try{
-    const r=await fetch(buildNbuRatesUrl({date:ymd}),{signal:AbortSignal.timeout(timeoutMs)});
-    if(!r.ok) return {ok:false,kind:"http",status:r.status};
-    const raw=await r.json();
-    if(!Array.isArray(raw)||!raw.length) return {ok:false,kind:"empty"};
-    cSet(keyHistDay(ymd),raw);
-    return {ok:true,data:raw,fromCache:false};
   }catch(err){
     const name=err?.name||"";
     if(name==="TimeoutError"||name==="AbortError") return {ok:false,kind:"timeout"};
@@ -88,7 +70,7 @@ export async function getHistory(cc,periodKey){
   const dates=buildHistorySampleDates(periodKey,new Date());
   const minPointsByPeriod={"30d":5,"90d":6,"1y":6};
   const minPoints=minPointsByPeriod[periodKey]||4;
-  const maxParallel=3;
+  const maxParallel=5;
   const result=new Array(dates.length).fill(null);
   const stats={timeout:0,http:0,empty:0,failed:0};
 
@@ -98,21 +80,12 @@ export async function getHistory(cc,periodKey){
       while(cursor<indexes.length){
         const idx=indexes[cursor++];
         const d=dates[idx];
-        const snapshotRes=await fetchDaySnapshot(d,timeoutMs);
-        if(snapshotRes.ok){
-          const row=snapshotRes.data.find((item)=>item?.cc===cc);
-          const rate=Number(row?.rate);
-          if(Number.isFinite(rate)&&rate>0){
-            result[idx]={date:d,rate};
-            continue;
-          }
-          stats.failed++;
-          stats.empty++;
-          continue;
-        }
+        const url=buildNbuRatesUrl({valcode:cc,date:fmtYMD(d)});
+        const res=await fetchHistoryPoint(url,timeoutMs);
+        if(res.ok){ result[idx]={date:d,rate:res.rate}; continue; }
         stats.failed++;
-        if(snapshotRes.kind==="timeout") stats.timeout++;
-        else if(snapshotRes.kind==="empty") stats.empty++;
+        if(res.kind==="timeout") stats.timeout++;
+        else if(res.kind==="empty") stats.empty++;
         else stats.http++;
       }
     }
