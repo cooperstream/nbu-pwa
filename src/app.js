@@ -129,7 +129,6 @@ baseSwitcher?.addEventListener("click",(e)=>{
   cards.syncCards(nextDisplayRates);
   charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
   // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
-  refreshDeltaCards();
   if(prevBase!==selectedBase){
     converter.updateConverterResult();
   }

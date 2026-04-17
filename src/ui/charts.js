@@ -233,10 +233,21 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     Object.values(chartInstances).forEach((c)=>{ try{c.destroy();}catch(_e){} });
     Object.keys(chartInstances).forEach((k)=>delete chartInstances[k]);
     Object.keys(activePeriod).forEach((k)=>delete activePeriod[k]);
+    Object.keys(chartRequestTokens).forEach((k)=>delete chartRequestTokens[k]);
     clearSparkPrefetchTimer();
     sparkPrefetchPromise=null;
     sparkPrefetchedKey="";
     queuedSparkRequest=null;
+  }
+
+  function disposeCard(cc){
+    if(!cc) return;
+    if(chartInstances[cc]){
+      try{ chartInstances[cc].destroy(); }catch(_e){}
+      delete chartInstances[cc];
+    }
+    delete activePeriod[cc];
+    delete chartRequestTokens[cc];
   }
 
   function resetSparklineMarkers(codes){
@@ -256,5 +267,5 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     if(openCode) loadChart(openCode,activePeriod[openCode]||"30d");
   }
 
-  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, refreshForBaseChange, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
+  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, refreshForBaseChange, disposeCard, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
 }

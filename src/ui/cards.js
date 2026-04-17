@@ -67,6 +67,8 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     Array.from(gridEl.querySelectorAll(".item-wrapper")).forEach((w)=>{
       const cc=w.id.replace("wrap-","");
       if(desiredCodes.includes(cc)) return;
+      // Cleanup chart-related state to avoid orphaned instances/tokens on targeted card removal.
+      charts.disposeCard(cc);
       if(w.classList.contains("active")) w.querySelector(".card")?.setAttribute("aria-expanded","false");
       w.remove();
     });
