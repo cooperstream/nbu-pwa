@@ -78,6 +78,15 @@ function refreshDeltaCards(){
   cards.updateCardDeltas(getDisplayRates(selectedBase,ratesByCode));
 }
 
+function getCurrentDisplayCodes(){
+  return getDisplayRates(selectedBase,ratesByCode).map((item)=>item.cc);
+}
+
+function refreshSparklineTargetsForViewport(){
+  if(!Object.keys(ratesByCode).length) return;
+  charts.handleViewportModeChange(getCurrentDisplayCodes(),selectedBase);
+}
+
 function loadYesterdayRatesInBackground(loadToken){
   // Deferred yesterday update: do not block the first dashboard render.
   getYesterdayRates().then((yesterdayRaw)=>{
@@ -151,8 +160,18 @@ installBtn.addEventListener("click",async()=>{
 window.addEventListener("appinstalled",()=>{ deferredPrompt=null; installBtn.style.display="none"; });
 
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{})); }
-window.addEventListener("resize",()=>{ const active=document.querySelector(".item-wrapper.active"); if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),80); });
-window.addEventListener("orientationchange",()=>{ const active=document.querySelector(".item-wrapper.active"); if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),250); });
+window.addEventListener("resize",()=>{
+  const active=document.querySelector(".item-wrapper.active");
+  if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),80);
+  refreshSparklineTargetsForViewport();
+});
+window.addEventListener("orientationchange",()=>{
+  const active=document.querySelector(".item-wrapper.active");
+  if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),250);
+  refreshSparklineTargetsForViewport();
+});
+const sparklineViewportQuery=window.matchMedia("(max-width: 560px)");
+sparklineViewportQuery.addEventListener("change",refreshSparklineTargetsForViewport);
 
 converter.bindEvents();
 updateBaseButtons();
