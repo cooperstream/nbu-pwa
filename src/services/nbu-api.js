@@ -17,20 +17,6 @@ export async function nbuFetch(url){
   return r.json();
 }
 
-export async function fetchHistoryPoint(url,timeoutMs=6000){
-  try{
-    const r=await fetch(url,{signal:AbortSignal.timeout(timeoutMs)});
-    if(!r.ok) return {ok:false,kind:"http",status:r.status};
-    const raw=await r.json();
-    if(!Array.isArray(raw)||!raw.length||!raw[0]?.rate) return {ok:false,kind:"empty"};
-    return {ok:true,rate:Number(raw[0].rate)};
-  }catch(err){
-    const name=err?.name||"";
-    if(name==="TimeoutError"||name==="AbortError") return {ok:false,kind:"timeout"};
-    return {ok:false,kind:"http"};
-  }
-}
-
 function keyHistDay(ymd){
   return `hist_day_${ymd}`;
 }
