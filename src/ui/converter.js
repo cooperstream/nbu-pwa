@@ -35,8 +35,32 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     let [,integerPart,separator,decimalPart]=match;
     integerPart=(integerPart||"").replace(/\D/g,"");
     decimalPart=(decimalPart||"").replace(/\D/g,"");
+    if(integerPart){
+      integerPart=integerPart.replace(/^0+(?=\d)/,"");
+    }
+    if(!integerPart && (separator || decimalPart)) integerPart="0";
     const groupedInteger=(integerPart||"0").replace(/\B(?=(\d{3})+(?!\d))/g," ");
     return separator ? `${groupedInteger}${separator}${decimalPart}` : groupedInteger;
+  }
+
+  function getCaretFromDigits(formatted, digitsBefore){
+    if(digitsBefore<=0) return 0;
+    let seen=0;
+    for(let i=0;i<formatted.length;i++){
+      if(/\d/.test(formatted[i])) seen++;
+      if(seen>=digitsBefore) return i+1;
+    }
+    return formatted.length;
+  }
+
+  function restoreInputCaret(input, nextCaret){
+    const safeCaret=Math.max(0, Math.min(nextCaret, input.value.length));
+    const applyCaret=()=>{
+      if(document.activeElement!==input) return;
+      input.setSelectionRange(safeCaret, safeCaret);
+    };
+    applyCaret();
+    requestAnimationFrame(applyCaret);
   }
 
   function getAmountNumber(){ return Number((amountInput.value||"").replace(/\s+/g,"").replace(",",".")); }
@@ -161,10 +185,10 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     amountInput?.addEventListener("input",()=>{
       const caret=amountInput.selectionStart??0;
       const digitsBefore=(amountInput.value.slice(0,caret).match(/\d/g)||[]).length;
-      const formatted=formatConverterAmountInput(amountInput.value); amountInput.value=formatted;
-      let nextCaret=formatted.length, seen=0;
-      for(let i=0;i<formatted.length;i++){ if(/\d/.test(formatted[i])) seen++; if(seen>=digitsBefore){ nextCaret=i+1; break; } }
-      amountInput.setSelectionRange(nextCaret,nextCaret);
+      const formatted=formatConverterAmountInput(amountInput.value);
+      amountInput.value=formatted;
+      const nextCaret=getCaretFromDigits(formatted, digitsBefore);
+      restoreInputCaret(amountInput, nextCaret);
       updateConverterResult();
     });
     fromSelect?.addEventListener("change",()=>{
