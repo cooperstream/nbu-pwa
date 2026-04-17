@@ -4,6 +4,7 @@ export const TTL = {
   h30:   20*60*1000,
   h90:   60*60*1000,
   h1y:   12*60*60*1000,
+  hDay:  24*60*60*1000,
   hEmpty:2*60*1000,
 };
 
@@ -34,5 +35,6 @@ export function cGet(k,ttl){
 
 export function keyToday(ymd){ return `rates_${ymd}`; }
 export function keyHist(cc,periodKey){ return `hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`; }
+export function keyHistDay(ymd){ return `hist_day_${ymd}`; }
 export function keyHistLegacy(cc,periodKey){ return `hist_${cc}_${periodKey}`; }
 export function keyHistEmpty(cc,periodKey){ return `hist_empty_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`; }
