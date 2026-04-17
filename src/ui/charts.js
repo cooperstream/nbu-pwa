@@ -3,8 +3,11 @@ import { fmtRate, isRisingTrend } from "../domain/rates.js";
 const chartInstances = {};
 const activePeriod = {};
 const chartRequestTokens = {};
-let sparkPrefetchLaunched = false;
 let sparkPrefetchPromise = null;
+let sparkPrefetchTimer = null;
+let sparkPrefetchedKey = "";
+let queuedSparkRequest = null;
+let chartJsLoadPromise = null;
 
 export function buildSparkline(values,W=68,H=30){
   if(!values||values.length<2) return "";
@@ -23,6 +26,25 @@ export function buildSparkline(values,W=68,H=30){
     <path d="${area}" fill="url(#${gid})"/>
     <polyline points="${pts}" stroke="${col}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
+}
+
+function ensureChartJsLoaded(){
+  if(window.Chart) return Promise.resolve(window.Chart);
+  if(chartJsLoadPromise) return chartJsLoadPromise;
+
+  // Lazy Chart.js loader with singleton in-flight promise.
+  chartJsLoadPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement("script");
+    script.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
+    script.async=true;
+    script.onload=()=>resolve(window.Chart);
+    script.onerror=()=>reject(new Error("Не вдалося завантажити Chart.js"));
+    document.head.appendChild(script);
+  }).finally(()=>{
+    if(!window.Chart) chartJsLoadPromise=null;
+  });
+
+  return chartJsLoadPromise;
 }
 
 export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
@@ -113,6 +135,7 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     setMsg(cc,"loader",false); setMsg(cc,"err",false); setMsg(cc,"empty",false);
 
     try{
+      await ensureChartJsLoaded();
       const history=await getDisplayHistory(cc,pKey,getSelectedBase());
       if(chartRequestTokens[cc]!==requestToken) return;
       if(activePeriod[cc]!==pKey) return;
@@ -158,10 +181,49 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     await Promise.all(Array.from({length:3},()=>worker()));
   }
 
-  function launchSparklinesPrefetch(getDisplayCodes){
-    if(sparkPrefetchLaunched) return sparkPrefetchPromise||Promise.resolve();
-    sparkPrefetchLaunched=true;
-    sparkPrefetchPromise=runPrefetchSparklines(getDisplayCodes).catch(()=>{}).finally(()=>{ sparkPrefetchPromise=null; });
+  function scheduleSparkPrefetch(run){
+    // Idle sparkline prefetch with fallback for browsers without requestIdleCallback.
+    if(typeof window.requestIdleCallback==="function"){
+      sparkPrefetchTimer=window.requestIdleCallback(run,{timeout:1500});
+      return;
+    }
+    sparkPrefetchTimer=window.setTimeout(run,180);
+  }
+
+  function clearSparkPrefetchTimer(){
+    if(!sparkPrefetchTimer) return;
+    if(typeof window.cancelIdleCallback==="function") window.cancelIdleCallback(sparkPrefetchTimer);
+    else window.clearTimeout(sparkPrefetchTimer);
+    sparkPrefetchTimer=null;
+  }
+
+  function launchSparklinesPrefetch(getDisplayCodes,prefetchKey="default"){
+    if(prefetchKey===sparkPrefetchedKey && !sparkPrefetchPromise && !queuedSparkRequest) return Promise.resolve();
+
+    if(sparkPrefetchPromise){
+      queuedSparkRequest={ getDisplayCodes, prefetchKey };
+      return sparkPrefetchPromise;
+    }
+
+    clearSparkPrefetchTimer();
+    sparkPrefetchPromise=new Promise((resolve)=>{
+      scheduleSparkPrefetch(async()=>{
+        sparkPrefetchTimer=null;
+        try{
+          await runPrefetchSparklines(getDisplayCodes);
+          sparkPrefetchedKey=prefetchKey;
+        }catch(_e){}
+        resolve();
+      });
+    }).finally(()=>{
+      sparkPrefetchPromise=null;
+      if(queuedSparkRequest){
+        const next=queuedSparkRequest;
+        queuedSparkRequest=null;
+        launchSparklinesPrefetch(next.getDisplayCodes,next.prefetchKey);
+      }
+    });
+
     return sparkPrefetchPromise;
   }
 
@@ -169,7 +231,10 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     Object.values(chartInstances).forEach((c)=>{ try{c.destroy();}catch(_e){} });
     Object.keys(chartInstances).forEach((k)=>delete chartInstances[k]);
     Object.keys(activePeriod).forEach((k)=>delete activePeriod[k]);
-    sparkPrefetchLaunched=false; sparkPrefetchPromise=null;
+    clearSparkPrefetchTimer();
+    sparkPrefetchPromise=null;
+    sparkPrefetchedKey="";
+    queuedSparkRequest=null;
   }
 
   return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
