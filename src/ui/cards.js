@@ -9,15 +9,9 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     return `<span class="delta ${cls}" title="${pct>0?'+':'−'}${Math.abs(diff).toFixed(4)} ${baseCode}">${arrow}${Math.abs(pct).toFixed(2)}%</span>`;
   }
 
-  function renderCards(rates){
-    const prevMap=getPrevMap();
-    const baseCode=getSelectedBase();
-    gridEl.innerHTML="";
-    rates.forEach((item)=>{
-      const meta=CURRENCY_META[item.cc]||{};
-      const w=document.createElement("section");
-      w.className="item-wrapper"; w.id=`wrap-${item.cc}`;
-      w.innerHTML=`
+  function buildCardMarkup(item,baseCode,prevMap){
+    const meta=CURRENCY_META[item.cc]||{};
+    return `
         <button class="card" type="button" aria-expanded="false" aria-controls="det-${item.cc}">
           <div class="currency-info">
             <div class="currency-badge" aria-hidden="true">${meta.symbol||item.cc}</div>
@@ -46,10 +40,52 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
             <div class="chart-wrap" id="cwrap-${item.cc}"><div class="chart-top-indicator" id="tip-${item.cc}" aria-live="polite"></div><canvas id="chart-${item.cc}"></canvas></div>
           </div>
         </div>`;
-      w.querySelector(".card").addEventListener("click",()=>toggleCard(item.cc));
-      w.querySelectorAll(".period-tab").forEach((btn)=>btn.addEventListener("click",(e)=>{ e.stopPropagation(); switchPeriod(item.cc,btn.dataset.period); }));
-      gridEl.appendChild(w);
+  }
+
+  function createCardElement(item,baseCode,prevMap){
+    const w=document.createElement("section");
+    w.className="item-wrapper"; w.id=`wrap-${item.cc}`;
+    w.innerHTML=buildCardMarkup(item,baseCode,prevMap);
+    w.querySelector(".card").addEventListener("click",()=>toggleCard(item.cc));
+    w.querySelectorAll(".period-tab").forEach((btn)=>btn.addEventListener("click",(e)=>{ e.stopPropagation(); switchPeriod(item.cc,btn.dataset.period); }));
+    return w;
+  }
+
+  function updateCardContent(w,item,baseCode,prevMap){
+    const rateNumber=w.querySelector(".rate-number");
+    const rateCurrency=w.querySelector(".rate-currency");
+    const rateMeta=w.querySelector(".rate-meta");
+    if(rateNumber) rateNumber.textContent=fmtRate(item.rate);
+    if(rateCurrency) rateCurrency.textContent=baseCode;
+    if(rateMeta) rateMeta.innerHTML=`${buildDelta(item.rate,prevMap[item.cc],baseCode)}<div class="rate-note">за ${item.units||1}&thinsp;${item.cc}</div>`;
+  }
+
+  function syncCards(rates){
+    const prevMap=getPrevMap();
+    const baseCode=getSelectedBase();
+    const desiredCodes=rates.map((item)=>item.cc);
+    Array.from(gridEl.querySelectorAll(".item-wrapper")).forEach((w)=>{
+      const cc=w.id.replace("wrap-","");
+      if(desiredCodes.includes(cc)) return;
+      if(w.classList.contains("active")) w.querySelector(".card")?.setAttribute("aria-expanded","false");
+      w.remove();
     });
+
+    rates.forEach((item,idx)=>{
+      let w=document.getElementById(`wrap-${item.cc}`);
+      if(!w){
+        w=createCardElement(item,baseCode,prevMap);
+      }else{
+        updateCardContent(w,item,baseCode,prevMap);
+      }
+      const expectedNode=gridEl.children[idx];
+      if(expectedNode!==w) gridEl.insertBefore(w,expectedNode||null);
+    });
+  }
+
+  function renderCards(rates){
+    gridEl.innerHTML="";
+    syncCards(rates);
   }
 
 
@@ -86,5 +122,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return { renderCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
+  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
 }

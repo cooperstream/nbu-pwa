@@ -1,5 +1,5 @@
 import { BASE_CODES, FOREIGN_CODES, getDisplayPrevMap, getDisplayRates, toRateMap } from "./domain/rates.js";
-import { getCurrentRates, getDisplayHistory, getYesterdayRates } from "./services/nbu-api.js";
+import { getCurrentRates, getDisplayHistory, getDisplayHistoriesBatch, getYesterdayRates } from "./services/nbu-api.js";
 import { createCardsUI } from "./ui/cards.js";
 import { createChartsUI } from "./ui/charts.js";
 import { createConverterUI } from "./ui/converter.js";
@@ -45,6 +45,7 @@ function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCard
 let cards;
 const charts = createChartsUI({
   getDisplayHistory,
+  getDisplayHistoriesBatch,
   getSelectedBase:()=>selectedBase,
   scheduleEnsureCardVisible,
   setMsg,
@@ -121,10 +122,17 @@ baseSwitcher?.addEventListener("click",(e)=>{
   if(!btn) return;
   const nextBase=btn.dataset.base;
   if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase) return;
+  const prevBase=selectedBase;
   selectedBase=nextBase;
   updateBaseButtons();
-  renderDashboard();
+  const nextDisplayRates=getDisplayRates(selectedBase,ratesByCode);
+  cards.syncCards(nextDisplayRates);
+  charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
+  // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
   refreshDeltaCards();
+  if(prevBase!==selectedBase){
+    converter.updateConverterResult();
+  }
 });
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden) return;
