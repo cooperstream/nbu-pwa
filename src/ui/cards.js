@@ -9,99 +9,49 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     return `<span class="delta ${cls}" title="${pct>0?'+':'−'}${Math.abs(diff).toFixed(4)} ${baseCode}">${arrow}${Math.abs(pct).toFixed(2)}%</span>`;
   }
 
-  function buildCardMarkup(item,baseCode,prevMap){
-    const meta=CURRENCY_META[item.cc]||{};
-    return `
-      <button class="card" type="button" aria-expanded="false" aria-controls="det-${item.cc}">
-        <div class="currency-info">
-          <div class="currency-badge" aria-hidden="true">${meta.symbol||item.cc}</div>
-          <div class="currency-text">
-            <div class="currency-code">${item.cc}</div>
-            <div class="currency-name">${meta.name||escHtml(item.txt)}</div>
-          </div>
-        </div>
-        <div class="right-side">
-          <div class="sparkline-col" id="spark-${item.cc}"></div>
-          <div class="rate-box"><div class="rate-row"><div class="rate-main">
-            <span class="rate-value"><span class="rate-number">${fmtRate(item.rate)}</span><span class="rate-currency">${baseCode}</span></span>
-            <div class="rate-meta">${buildDelta(item.rate,prevMap[item.cc],baseCode)}<div class="rate-note">за ${item.units||1}&thinsp;${item.cc}</div></div>
-          </div></div></div>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-      </button>
-      <div class="details" id="det-${item.cc}" role="region" aria-label="Деталі ${item.cc}">
-        <div class="details-inner">
-          <div class="period-tabs" role="group" aria-label="Обрати період">
-            ${Object.entries(PERIODS).map(([k,p])=>`<button class="period-tab${k==='30d'?' active':''}" data-cc="${item.cc}" data-period="${k}">${p.label}</button>`).join("")}
-          </div>
-          <div class="loader-text" id="loader-${item.cc}" style="display:none">Завантаження…</div>
-          <div class="chart-error" id="err-${item.cc}" style="display:none"></div>
-          <div class="chart-empty" id="empty-${item.cc}" style="display:none">Немає даних.</div>
-          <div class="chart-wrap" id="cwrap-${item.cc}"><div class="chart-top-indicator" id="tip-${item.cc}" aria-live="polite"></div><canvas id="chart-${item.cc}"></canvas></div>
-        </div>
-      </div>`;
-  }
-
-  function wireCardEvents(w,cc){
-    w.querySelector(".card")?.addEventListener("click",()=>toggleCard(cc));
-    w.querySelectorAll(".period-tab").forEach((btn)=>btn.addEventListener("click",(e)=>{ e.stopPropagation(); switchPeriod(cc,btn.dataset.period); }));
-  }
-
-  function createCardElement(item,baseCode,prevMap){
-    const w=document.createElement("section");
-    w.className="item-wrapper";
-    w.id=`wrap-${item.cc}`;
-    w.innerHTML=buildCardMarkup(item,baseCode,prevMap);
-    wireCardEvents(w,item.cc);
-    return w;
-  }
-
-  function updateCardRateAndDelta(item,baseCode,prevMap){
-    const wrap=document.getElementById(`wrap-${item.cc}`);
-    if(!wrap) return;
-    const numEl=wrap.querySelector(".rate-number");
-    const baseEl=wrap.querySelector(".rate-currency");
-    const rateMeta=wrap.querySelector(".rate-meta");
-    if(numEl) numEl.textContent=fmtRate(item.rate);
-    if(baseEl) baseEl.textContent=baseCode;
-    if(rateMeta) rateMeta.innerHTML=`${buildDelta(item.rate,prevMap[item.cc],baseCode)}<div class="rate-note">за ${item.units||1}&thinsp;${item.cc}</div>`;
-  }
-
   function renderCards(rates){
     const prevMap=getPrevMap();
     const baseCode=getSelectedBase();
     gridEl.innerHTML="";
-    rates.forEach((item)=>gridEl.appendChild(createCardElement(item,baseCode,prevMap)));
+    rates.forEach((item)=>{
+      const meta=CURRENCY_META[item.cc]||{};
+      const w=document.createElement("section");
+      w.className="item-wrapper"; w.id=`wrap-${item.cc}`;
+      w.innerHTML=`
+        <button class="card" type="button" aria-expanded="false" aria-controls="det-${item.cc}">
+          <div class="currency-info">
+            <div class="currency-badge" aria-hidden="true">${meta.symbol||item.cc}</div>
+            <div class="currency-text">
+              <div class="currency-code">${item.cc}</div>
+              <div class="currency-name">${meta.name||escHtml(item.txt)}</div>
+            </div>
+          </div>
+          <div class="right-side">
+            <div class="sparkline-col" id="spark-${item.cc}"></div>
+            <div class="rate-box"><div class="rate-row"><div class="rate-main">
+              <span class="rate-value"><span class="rate-number">${fmtRate(item.rate)}</span><span class="rate-currency">${baseCode}</span></span>
+              <div class="rate-meta">${buildDelta(item.rate,prevMap[item.cc],baseCode)}<div class="rate-note">за ${item.units||1}&thinsp;${item.cc}</div></div>
+            </div></div></div>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </button>
+        <div class="details" id="det-${item.cc}" role="region" aria-label="Деталі ${item.cc}">
+          <div class="details-inner">
+            <div class="period-tabs" role="group" aria-label="Обрати період">
+              ${Object.entries(PERIODS).map(([k,p])=>`<button class="period-tab${k==='30d'?' active':''}" data-cc="${item.cc}" data-period="${k}">${p.label}</button>`).join("")}
+            </div>
+            <div class="loader-text" id="loader-${item.cc}" style="display:none">Завантаження…</div>
+            <div class="chart-error" id="err-${item.cc}" style="display:none"></div>
+            <div class="chart-empty" id="empty-${item.cc}" style="display:none">Немає даних.</div>
+            <div class="chart-wrap" id="cwrap-${item.cc}"><div class="chart-top-indicator" id="tip-${item.cc}" aria-live="polite"></div><canvas id="chart-${item.cc}"></canvas></div>
+          </div>
+        </div>`;
+      w.querySelector(".card").addEventListener("click",()=>toggleCard(item.cc));
+      w.querySelectorAll(".period-tab").forEach((btn)=>btn.addEventListener("click",(e)=>{ e.stopPropagation(); switchPeriod(item.cc,btn.dataset.period); }));
+      gridEl.appendChild(w);
+    });
   }
 
-  function patchCardsForBaseChange(rates){
-    const baseCode=getSelectedBase();
-    const prevMap=getPrevMap();
-    const nextCodes=new Set(rates.map((r)=>r.cc));
-
-    // Keep existing DOM for shared currencies; only remove/add cards that changed due to new base.
-    gridEl.querySelectorAll(".item-wrapper").forEach((wrap)=>{
-      const cc=wrap.id.replace("wrap-","");
-      if(nextCodes.has(cc)) return;
-      charts.removeCardState?.(cc);
-      wrap.remove();
-    });
-
-    rates.forEach((item)=>{
-      let wrap=document.getElementById(`wrap-${item.cc}`);
-      if(!wrap){
-        wrap=createCardElement(item,baseCode,prevMap);
-        gridEl.appendChild(wrap);
-      }else{
-        updateCardRateAndDelta(item,baseCode,prevMap);
-      }
-    });
-
-    rates.forEach((item)=>{
-      const wrap=document.getElementById(`wrap-${item.cc}`);
-      if(wrap) gridEl.appendChild(wrap);
-    });
-  }
 
   function updateCardDeltas(rates){
     const prevMap=getPrevMap();
@@ -136,12 +86,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return {
-    renderCards,
-    patchCardsForBaseChange,
-    updateCardDeltas,
-    toggleCard,
-    switchPeriod,
-    getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null
-  };
+  return { renderCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
 }

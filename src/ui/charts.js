@@ -32,6 +32,7 @@ function ensureChartJsLoaded(){
   if(window.Chart) return Promise.resolve(window.Chart);
   if(chartJsLoadPromise) return chartJsLoadPromise;
 
+  // Lazy Chart.js loader with singleton in-flight promise.
   chartJsLoadPromise=new Promise((resolve,reject)=>{
     const script=document.createElement("script");
     script.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
@@ -46,7 +47,7 @@ function ensureChartJsLoaded(){
   return chartJsLoadPromise;
 }
 
-export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
   function renderChart(cc,history,pKey,baseCode){
     const Chart = window.Chart;
     const cwrap=document.getElementById(`cwrap-${cc}`);
@@ -159,30 +160,29 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
   async function runPrefetchSparklines(getDisplayCodes){
     if(window.matchMedia("(max-width: 560px)").matches) return;
     const codes=getDisplayCodes();
-    const visibleCodes=codes.filter((cc)=>{
-      const el=document.getElementById(`spark-${cc}`);
-      if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") return false;
-      const rect=el.getBoundingClientRect();
-      return rect.bottom>=-120&&rect.top<=window.innerHeight+120;
-    });
-    if(!visibleCodes.length) return;
-
-    // Batch prefetch avoids repeating date sampling + per-currency local history rebuilds.
-    const historiesByCode=getDisplayHistoriesBatch
-      ? await getDisplayHistoriesBatch(visibleCodes,"30d",getSelectedBase())
-      : Object.fromEntries(await Promise.all(visibleCodes.map(async(cc)=>[cc,await getDisplayHistory(cc,"30d",getSelectedBase())])));
-
-    visibleCodes.forEach((cc)=>{
-      const el=document.getElementById(`spark-${cc}`);
-      const h=historiesByCode[cc]||[];
-      if(!el||h.length<2) return;
-      el.innerHTML=buildSparkline(h.map((p)=>p.rate));
-      el.classList.add("ready");
-      el.dataset.sparkReady="1";
-    });
+    let failures=0;
+    const queue=[...codes];
+    async function worker(){
+      while(queue.length && failures<3){
+        const cc=queue.shift();
+        const el=document.getElementById(`spark-${cc}`);
+        if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") continue;
+        const rect=el.getBoundingClientRect();
+        if(!(rect.bottom>=-120&&rect.top<=window.innerHeight+120)) continue;
+        try{
+          const h=await getDisplayHistory(cc,"30d",getSelectedBase());
+          if(h.length<2) continue;
+          el.innerHTML=buildSparkline(h.map((p)=>p.rate));
+          el.classList.add("ready");
+          el.dataset.sparkReady="1";
+        }catch(_e){ failures++; }
+      }
+    }
+    await Promise.all(Array.from({length:3},()=>worker()));
   }
 
   function scheduleSparkPrefetch(run){
+    // Idle sparkline prefetch with fallback for browsers without requestIdleCallback.
     if(typeof window.requestIdleCallback==="function"){
       sparkPrefetchTimer=window.requestIdleCallback(run,{timeout:1500});
       return;
@@ -227,55 +227,15 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     return sparkPrefetchPromise;
   }
 
-  function removeCardState(cc){
-    if(chartInstances[cc]){ try{chartInstances[cc].destroy();}catch(_e){} }
-    delete chartInstances[cc];
-    delete activePeriod[cc];
-    delete chartRequestTokens[cc];
-  }
-
-  async function refreshForBaseChange(displayCodes){
-    const openCc=getOpenCardCode();
-
-    // Repaint existing sparklines with new base using already-cached batch histories when possible.
-    try{
-      const readyCodes=(displayCodes||[]).filter((cc)=>document.getElementById(`spark-${cc}`)?.dataset.sparkReady==="1");
-      if(readyCodes.length){
-        const histories=await (getDisplayHistoriesBatch
-          ? getDisplayHistoriesBatch(readyCodes,"30d",getSelectedBase())
-          : Promise.resolve({}));
-        readyCodes.forEach((cc)=>{
-          const h=histories[cc]||[];
-          const el=document.getElementById(`spark-${cc}`);
-          if(!el||h.length<2) return;
-          el.innerHTML=buildSparkline(h.map((p)=>p.rate));
-        });
-      }
-    }catch(_e){}
-
-    if(openCc){
-      await loadChart(openCc,activePeriod[openCc]||"30d");
-    }
-  }
-
   function resetChartState(){
     Object.values(chartInstances).forEach((c)=>{ try{c.destroy();}catch(_e){} });
     Object.keys(chartInstances).forEach((k)=>delete chartInstances[k]);
     Object.keys(activePeriod).forEach((k)=>delete activePeriod[k]);
-    Object.keys(chartRequestTokens).forEach((k)=>delete chartRequestTokens[k]);
     clearSparkPrefetchTimer();
     sparkPrefetchPromise=null;
     sparkPrefetchedKey="";
     queuedSparkRequest=null;
   }
 
-  return {
-    loadChart,
-    switchPeriod,
-    launchSparklinesPrefetch,
-    resetChartState,
-    removeCardState,
-    refreshForBaseChange,
-    getActivePeriod:(cc)=>activePeriod[cc]||"30d"
-  };
+  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
 }
