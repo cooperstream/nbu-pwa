@@ -52,6 +52,18 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     });
   }
 
+
+  function updateCardDeltas(rates){
+    const prevMap=getPrevMap();
+    const baseCode=getSelectedBase();
+    rates.forEach((item)=>{
+      const wrap=document.getElementById(`wrap-${item.cc}`);
+      const rateMeta=wrap?.querySelector(".rate-meta");
+      if(!rateMeta) return;
+      rateMeta.innerHTML=`${buildDelta(item.rate,prevMap[item.cc],baseCode)}<div class="rate-note">за ${item.units||1}&thinsp;${item.cc}</div>`;
+    });
+  }
+
   async function toggleCard(cc){
     const w=document.getElementById(`wrap-${cc}`);
     const btn=w?.querySelector(".card");
@@ -74,5 +86,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return { renderCards, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
+  return { renderCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
 }
