@@ -47,7 +47,7 @@ function ensureChartJsLoaded(){
   return chartJsLoadPromise;
 }
 
-export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
   function renderChart(cc,history,pKey,baseCode){
     const Chart = window.Chart;
     const cwrap=document.getElementById(`cwrap-${cc}`);
@@ -159,26 +159,28 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
 
   async function runPrefetchSparklines(getDisplayCodes){
     if(window.matchMedia("(max-width: 560px)").matches) return;
-    const codes=getDisplayCodes();
-    let failures=0;
-    const queue=[...codes];
-    async function worker(){
-      while(queue.length && failures<3){
-        const cc=queue.shift();
+    const baseCode=getSelectedBase();
+    const visibleCodes=(getDisplayCodes()||[]).filter((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") return false;
+      const rect=el.getBoundingClientRect();
+      return rect.bottom>=-120&&rect.top<=window.innerHeight+120;
+    });
+    if(!visibleCodes.length) return;
+    try{
+      // Batch sparkline warmup reuses one history build flow for the whole visible set.
+      const histories=await getDisplayHistoriesBatch(visibleCodes,"30d",baseCode);
+      visibleCodes.forEach((cc)=>{
         const el=document.getElementById(`spark-${cc}`);
-        if(!el||el.classList.contains("ready")||el.dataset.sparkReady==="1") continue;
-        const rect=el.getBoundingClientRect();
-        if(!(rect.bottom>=-120&&rect.top<=window.innerHeight+120)) continue;
-        try{
-          const h=await getDisplayHistory(cc,"30d",getSelectedBase());
-          if(h.length<2) continue;
-          el.innerHTML=buildSparkline(h.map((p)=>p.rate));
-          el.classList.add("ready");
-          el.dataset.sparkReady="1";
-        }catch(_e){ failures++; }
-      }
+        const h=histories[cc]||[];
+        if(!el||h.length<2) return;
+        el.innerHTML=buildSparkline(h.map((p)=>p.rate));
+        el.classList.add("ready");
+        el.dataset.sparkReady="1";
+      });
+    }catch(_e){
+      // Keep prefetch best-effort.
     }
-    await Promise.all(Array.from({length:3},()=>worker()));
   }
 
   function scheduleSparkPrefetch(run){
@@ -237,5 +239,22 @@ export function createChartsUI({ getDisplayHistory, getSelectedBase, scheduleEns
     queuedSparkRequest=null;
   }
 
-  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
+  function resetSparklineMarkers(codes){
+    (codes||[]).forEach((cc)=>{
+      const el=document.getElementById(`spark-${cc}`);
+      if(!el) return;
+      el.classList.remove("ready");
+      el.dataset.sparkReady="0";
+      el.innerHTML="";
+    });
+  }
+
+  function refreshForBaseChange(displayCodes,nextBase){
+    resetSparklineMarkers(displayCodes);
+    launchSparklinesPrefetch(()=>displayCodes,nextBase);
+    const openCode=getOpenCardCode();
+    if(openCode) loadChart(openCode,activePeriod[openCode]||"30d");
+  }
+
+  return { loadChart, switchPeriod, launchSparklinesPrefetch, resetChartState, refreshForBaseChange, getActivePeriod:(cc)=>activePeriod[cc]||"30d" };
 }
