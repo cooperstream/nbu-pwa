@@ -181,13 +181,7 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
   }
 
   function openConverter(){
-    let closedActiveCards=false;
-    document.querySelectorAll(".item-wrapper.active").forEach((el)=>{
-      closedActiveCards=true;
-      el.classList.remove("active");
-      el.querySelector('.card')?.setAttribute("aria-expanded","false");
-    });
-    if(closedActiveCards) onCloseActiveCards?.();
+    onCloseActiveCards?.();
     renderConverterOptions(); updateConverterResult();
     headerEl.classList.add("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","true");
