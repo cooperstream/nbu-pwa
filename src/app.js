@@ -25,10 +25,7 @@ const converter = createConverterUI({
   swapBtn:document.getElementById("converter-swap"),
   resultEl:document.getElementById("converter-result"),
   rateEl:document.getElementById("converter-rate"),
-  onCloseActiveCards:()=>{
-    renderBaseSwitchers();
-    updateBaseButtons();
-  },
+  onCloseActiveCards:()=>updateBaseButtons(),
 });
 
 function setMsg(cc,type,visible,text){
@@ -64,48 +61,19 @@ cards = createCardsUI({
   scheduleEnsureCardVisible,
 });
 
-function getBaseCodes(){
-  return Array.from(baseSwitcher?.querySelectorAll(".base-btn")||[]).map((btn)=>btn.dataset.base).filter(Boolean);
-}
-
-function renderBaseButtons(chipsEl,{excludeCode=null}={}){
-  if(!chipsEl) return;
-  const codes=getBaseCodes().filter((code)=>code!==excludeCode);
-  chipsEl.innerHTML=codes.map((code)=>`<button class="base-btn${code===selectedBase?" active":""}" type="button" data-base="${code}">${code}</button>`).join("");
-}
-
 function updateBaseButtons(){
-  document.querySelectorAll(".base-btn").forEach((btn)=>{
-    btn.classList.toggle("active",btn.dataset.base===selectedBase);
-  });
-}
-
-function renderBaseSwitchers(){
   const openCardCode=cards?.getOpenCardCode?.()||null;
-
-  if(baseSwitcher){
-    if(openCardCode) baseSwitcher.style.display="none";
-    else baseSwitcher.style.removeProperty("display");
-  }
-
-  document.querySelectorAll(".card-base-switcher").forEach((el)=>el.remove());
-  if(!openCardCode) return;
-
-  const openWrap=document.getElementById(`wrap-${openCardCode}`);
-  if(!openWrap) return;
-  const localSwitcher=document.createElement("div");
-  localSwitcher.className="card-base-switcher";
-  localSwitcher.setAttribute("role","group");
-  localSwitcher.setAttribute("aria-label","Базова валюта");
-  localSwitcher.innerHTML='<div class="base-chips"></div>';
-  openWrap.insertBefore(localSwitcher,openWrap.firstChild);
-  renderBaseButtons(localSwitcher.querySelector(".base-chips"),{excludeCode:openCardCode});
+  baseSwitcher?.querySelectorAll(".base-btn").forEach((btn)=>{
+    const isActive=btn.dataset.base===selectedBase;
+    const isCloseTarget=!isActive&&openCardCode&&btn.dataset.base===openCardCode;
+    btn.classList.toggle("active",isActive);
+    btn.classList.toggle("is-close-target",Boolean(isCloseTarget));
+  });
 }
 
 function renderDashboard(){
   charts.resetChartState();
   cards.renderCards(getDisplayRates(selectedBase,ratesByCode));
-  renderBaseSwitchers();
   // Sparkline prefetch is deferred to idle time so it does not compete with first paint.
   charts.launchSparklinesPrefetch(()=>Object.keys(ratesByCode).filter((cc)=>cc!==selectedBase),selectedBase);
   converter.setRates(ratesByCode);
@@ -166,18 +134,13 @@ async function loadDashboard(forceRefresh=false){
 
 refreshBtn.addEventListener("click",()=>loadDashboard(true));
 grid.addEventListener("click",(e)=>{
-  if(e.target.closest(".card")){
-    requestAnimationFrame(()=>{
-      renderBaseSwitchers();
-      updateBaseButtons();
-    });
-    return;
-  }
-
-  const localBaseBtn=e.target.closest(".card-base-switcher .base-btn");
-  if(localBaseBtn) handleBaseSwitch(localBaseBtn.dataset.base);
+  if(!e.target.closest(".card")) return;
+  requestAnimationFrame(updateBaseButtons);
 });
-function handleBaseSwitch(nextBase){
+baseSwitcher?.addEventListener("click",(e)=>{
+  const btn=e.target.closest(".base-btn");
+  if(!btn) return;
+  const nextBase=btn.dataset.base;
   if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase) return;
   const prevBase=selectedBase;
   selectedBase=nextBase;
@@ -185,17 +148,11 @@ function handleBaseSwitch(nextBase){
   const nextDisplayRates=getDisplayRates(selectedBase,ratesByCode);
   cards.syncCards(nextDisplayRates);
   charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
-  renderBaseSwitchers();
   updateBaseButtons();
   // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
   if(prevBase!==selectedBase){
     converter.updateConverterResult();
   }
-}
-baseSwitcher?.addEventListener("click",(e)=>{
-  const btn=e.target.closest(".base-btn");
-  if(!btn) return;
-  handleBaseSwitch(btn.dataset.base);
 });
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden) return;
@@ -229,6 +186,5 @@ const sparklineViewportQuery=window.matchMedia("(max-width: 560px)");
 sparklineViewportQuery.addEventListener("change",refreshSparklineTargetsForViewport);
 
 converter.bindEvents();
-renderBaseSwitchers();
 updateBaseButtons();
 loadDashboard();
