@@ -1,6 +1,4 @@
 .item-wrapper{background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.96));border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:border-color .2s}
-.item-wrapper.active,.item-wrapper.closing{border-color:var(--border)}
-.item-wrapper:focus-within{border-color:var(--border)}
 .grid.focused-card-mode{display:block}
 .grid.focused-card-mode .item-wrapper:not(.active):not(.closing){display:none}
 .grid.focused-card-mode .item-wrapper.active{margin:0}
