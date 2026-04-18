@@ -16,14 +16,34 @@ let ratesByCode={};
 let prevRatesByCode={};
 let dashboardLoadToken=0;
 let isConverterFocused=false;
+let focusedMode="none";
+let listRevealTimer=0;
+const LIST_REVEAL_CLASS="list-reveal";
+const LIST_REVEAL_DURATION_MS=165;
+
+function triggerListReveal(){
+  if(!grid) return;
+  grid.classList.remove(LIST_REVEAL_CLASS);
+  void grid.offsetWidth;
+  grid.classList.add(LIST_REVEAL_CLASS);
+  window.clearTimeout(listRevealTimer);
+  listRevealTimer=window.setTimeout(()=>{
+    grid.classList.remove(LIST_REVEAL_CLASS);
+  },LIST_REVEAL_DURATION_MS);
+}
 
 function setFocusedMode(mode){
+  const prevMode=focusedMode;
+  focusedMode=mode;
   const isCardFocused=mode==="card";
   const isConverterMode=mode==="converter";
   isConverterFocused=isConverterMode;
   grid.classList.toggle("focused-converter-mode",isConverterMode);
   headerEl?.classList.toggle("converter-focus",isConverterMode);
   headerEl?.classList.toggle("has-open-card",isCardFocused);
+  if(prevMode!=="none"&&mode==="none"){
+    triggerListReveal();
+  }
 }
 
 const converter = createConverterUI({
