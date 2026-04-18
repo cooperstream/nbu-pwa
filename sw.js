@@ -1,4 +1,4 @@
-const CACHE = 'nbu-pwa-v4';
+const CACHE = 'nbu-pwa-v5';
 const withScope = (path = '') => new URL(path, self.registration.scope).pathname;
 
 const APP_SHELL = [
@@ -11,6 +11,12 @@ const APP_SHELL = [
   withScope('styles/components/converter.css'),
   withScope('styles/components/chart.css'),
   withScope('src/app.js'),
+  withScope('src/domain/rates.js'),
+  withScope('src/services/cache.js'),
+  withScope('src/services/nbu-api.js'),
+  withScope('src/ui/cards.js'),
+  withScope('src/ui/charts.js'),
+  withScope('src/ui/converter.js'),
   withScope('vendor/chart.umd.min.js'),
   withScope('icon-192.png'),
   withScope('icon-512.png'),
