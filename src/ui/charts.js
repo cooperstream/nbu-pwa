@@ -11,7 +11,7 @@ const observedSparkTargets = new Map();
 const queuedSparkCodes = new Set();
 let chartJsLoadPromise = null;
 
-export function buildSparkline(values,W=68,H=30){
+function buildSparkline(values,W=68,H=30){
   if(!values||values.length<2) return "";
   const min=Math.min(...values),max=Math.max(...values),rng=max-min||1;
   const px=i=>((i/(values.length-1))*W).toFixed(1);

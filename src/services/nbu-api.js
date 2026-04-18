@@ -1,17 +1,17 @@
 import { addDays, buildHistorySampleDates, fmtYMD, toDayKey } from "../domain/rates.js";
-import { cGet, cSet, keyHist, keyHistEmpty, keyHistLegacy, keyToday, TTL } from "./cache.js";
+import { cGet, cSet, keyHist, keyHistEmpty, keyToday, TTL } from "./cache.js";
 
 const NBU_BASE_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
 const dayRatesInflight = new Map();
 
-export function buildNbuRatesUrl({date,valcode}){
+function buildNbuRatesUrl({date,valcode}){
   const params = new URLSearchParams({ json: "" });
   if(date) params.set("date", date);
   if(valcode) params.set("valcode", valcode);
   return `${NBU_BASE_URL}?${params.toString()}`;
 }
 
-export async function nbuFetch(url){
+async function nbuFetch(url){
   const r=await fetch(url,{signal:AbortSignal.timeout(6000)});
   if(!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
@@ -88,11 +88,6 @@ export async function getYesterdayRates(){
   return [];
 }
 
-export async function getHistory(cc,periodKey){
-  const batch=await getHistoriesBatch([cc],periodKey);
-  return batch[cc]||[];
-}
-
 export async function getHistoriesBatch(codes,periodKey){
   const uniqueCodes=[...new Set((codes||[]).filter(Boolean))];
   if(!uniqueCodes.length) return {};
@@ -114,12 +109,6 @@ export async function getHistoriesBatch(codes,periodKey){
     const cached=cGet(cKey,ttlH);
     if(Array.isArray(cached)&&cached.length>0){
       response[cc]=cached.map((i)=>({date:new Date(i.d),rate:i.r}));
-      continue;
-    }
-
-    const legacyCached=cGet(keyHistLegacy(cc,periodKey),ttlH);
-    if(Array.isArray(legacyCached)&&legacyCached.length>0){
-      response[cc]=legacyCached.map((i)=>({date:new Date(i.d),rate:i.r}));
       continue;
     }
 

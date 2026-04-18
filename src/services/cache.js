@@ -34,5 +34,4 @@ export function cGet(k,ttl){
 
 export function keyToday(ymd){ return `rates_${ymd}`; }
 export function keyHist(cc,periodKey){ return `hist_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`; }
-export function keyHistLegacy(cc,periodKey){ return `hist_${cc}_${periodKey}`; }
 export function keyHistEmpty(cc,periodKey){ return `hist_empty_v${HIST_CACHE_VERSION}_${cc}_${periodKey}`; }
