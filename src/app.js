@@ -15,6 +15,16 @@ let selectedBase="UAH";
 let ratesByCode={};
 let prevRatesByCode={};
 let dashboardLoadToken=0;
+let isConverterFocused=false;
+
+function setFocusedMode(mode){
+  const isCardFocused=mode==="card";
+  const isConverterMode=mode==="converter";
+  isConverterFocused=isConverterMode;
+  grid.classList.toggle("focused-converter-mode",isConverterMode);
+  headerEl?.classList.toggle("converter-focus",isConverterMode);
+  headerEl?.classList.toggle("has-open-card",isCardFocused);
+}
 
 const converter = createConverterUI({
   headerEl,
@@ -28,6 +38,9 @@ const converter = createConverterUI({
   onCloseActiveCards:()=>{
     cards?.closeActiveCard?.({ restoreScroll:true });
     updateBaseButtons();
+  },
+  onFocusModeChange:(isFocused)=>{
+    setFocusedMode(isFocused?"converter":"none");
   },
 });
 
@@ -65,8 +78,12 @@ cards = createCardsUI({
 });
 
 function updateBaseButtons(){
+  if(isConverterFocused){
+    headerEl?.classList.remove("has-open-card");
+    return;
+  }
   const openCardCode=cards?.getOpenCardCode?.()||null;
-  headerEl?.classList.toggle("has-open-card",Boolean(openCardCode));
+  setFocusedMode(openCardCode?"card":"none");
   document.querySelectorAll(".base-switcher .base-btn").forEach((btn)=>{
     const isActive=btn.dataset.base===selectedBase;
     btn.classList.toggle("active",isActive);
