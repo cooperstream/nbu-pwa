@@ -14,29 +14,6 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     from: { select: fromSelect, trigger: fromTrigger, menu: fromMenu },
     to: { select: toSelect, trigger: toTrigger, menu: toMenu },
   };
-  let converterCloseTransitionToken = 0;
-
-  function parseTimeTokenToMs(token){
-    const value=token.trim();
-    if(!value) return 0;
-    if(value.endsWith("ms")) return Number.parseFloat(value)||0;
-    if(value.endsWith("s")) return (Number.parseFloat(value)||0)*1000;
-    return Number.parseFloat(value)||0;
-  }
-
-  function getTransitionMaxDurationMs(el){
-    const style=window.getComputedStyle(el);
-    const durations=style.transitionDuration.split(",");
-    const delays=style.transitionDelay.split(",");
-    const listLength=Math.max(durations.length,delays.length);
-    let maxDuration=0;
-    for(let idx=0;idx<listLength;idx++){
-      const duration=parseTimeTokenToMs(durations[idx]??durations[durations.length-1]??"0s");
-      const delay=parseTimeTokenToMs(delays[idx]??delays[delays.length-1]??"0s");
-      maxDuration=Math.max(maxDuration,duration+delay);
-    }
-    return maxDuration;
-  }
 
   function getConverterCodes(){ return ORDERED_CODES.filter((cc)=>cc==="UAH"||Number.isFinite(ratesByCode[cc])); }
 
@@ -204,7 +181,6 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
   }
 
   function openConverter(){
-    converterCloseTransitionToken++;
     onCloseActiveCards?.();
     renderConverterOptions(); updateConverterResult();
     headerEl.classList.add("converter-open");
@@ -213,38 +189,11 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     focusAmountInput();
   }
 
-  function releaseFocusModeAfterConverterCollapse(){
-    const converterPanel=headerEl.querySelector(".header-converter");
-    if(!converterPanel){
-      onFocusModeChange?.(false);
-      return;
-    }
-    const token=++converterCloseTransitionToken;
-    let finished=false;
-    const finish=()=>{
-      if(finished) return;
-      finished=true;
-      converterPanel.removeEventListener("transitionend",onTransitionEnd);
-      window.clearTimeout(fallbackTimer);
-      if(token!==converterCloseTransitionToken) return;
-      if(headerEl.classList.contains("converter-open")) return;
-      onFocusModeChange?.(false);
-    };
-    const onTransitionEnd=(event)=>{
-      if(event.target!==converterPanel) return;
-      if(event.propertyName!=="max-height" && event.propertyName!=="opacity") return;
-      finish();
-    };
-    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(converterPanel)+80);
-    converterPanel.addEventListener("transitionend",onTransitionEnd);
-  }
-
   function closeConverter(){
-    if(!headerEl.classList.contains("converter-open")) return;
     closeAllPickers();
     headerEl.classList.remove("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","false");
-    releaseFocusModeAfterConverterCollapse();
+    onFocusModeChange?.(false);
   }
 
   function bindEvents(){
