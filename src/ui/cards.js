@@ -1,4 +1,4 @@
-import { CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/rates.js";
+import { BASE_CODES, CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/rates.js";
 
 export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible }){
   function buildDelta(today,prev,baseCode){
@@ -33,6 +33,11 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
           <div class="details-inner">
             <div class="period-tabs" role="group" aria-label="Обрати період">
               ${Object.entries(PERIODS).map(([k,p])=>`<button class="period-tab${k==='30d'?' active':''}" data-cc="${item.cc}" data-period="${k}">${p.label}</button>`).join("")}
+            </div>
+            <div class="base-switcher-inline" role="group" aria-label="Базова валюта">
+              <div class="base-chips">
+                ${BASE_CODES.map((code)=>`<button class="base-btn${code===baseCode?' active':''}" type="button" data-base="${code}">${code}</button>`).join("")}
+              </div>
             </div>
             <div class="loader-text" id="loader-${item.cc}" style="display:none">Завантаження…</div>
             <div class="chart-error" id="err-${item.cc}" style="display:none"></div>
