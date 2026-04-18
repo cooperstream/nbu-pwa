@@ -50,6 +50,23 @@ function ensureChartJsLoaded(){
 }
 
 export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+  function clearChartHoverState(cc){
+    if(!cc) return;
+    const topTip=document.getElementById(`tip-${cc}`);
+    if(topTip){
+      topTip.classList.remove("visible");
+      topTip.textContent="";
+      topTip.style.left="";
+    }
+    const chart=chartInstances[cc];
+    if(!chart) return;
+    try{
+      chart.setActiveElements?.([]);
+      chart.tooltip?.setActiveElements?.([],{x:0,y:0});
+      chart.update?.("none");
+    }catch(_e){}
+  }
+
   function isSparklineDisabled(){
     return window.matchMedia("(max-width: 560px)").matches;
   }
@@ -62,6 +79,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     const topTip=document.getElementById(`tip-${cc}`);
     if(!cwrap||!canvas||!Chart) return;
 
+    clearChartHoverState(cc);
     if(chartInstances[cc]){ try{chartInstances[cc].destroy();}catch(_e){} delete chartInstances[cc]; }
     const existingChart = typeof Chart.getChart === "function" ? Chart.getChart(canvas) : null;
     if(existingChart){ try{existingChart.destroy();}catch(_e){} }
@@ -136,6 +154,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     activePeriod[cc]=pKey;
     const requestToken=`${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
     chartRequestTokens[cc]=requestToken;
+    clearChartHoverState(cc);
     const cwrap=document.getElementById(`cwrap-${cc}`);
     cwrap?.classList.remove("ready");
     cwrap?.classList.add("loading");
@@ -147,10 +166,11 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
       if(chartRequestTokens[cc]!==requestToken) return;
       if(activePeriod[cc]!==pKey) return;
       if(getOpenCardCode()!==cc) return;
-      if(!history.length){ cwrap?.classList.remove("loading"); setMsg(cc,"empty",true,"Немає даних за цей період."); return; }
+      if(!history.length){ clearChartHoverState(cc); cwrap?.classList.remove("loading"); setMsg(cc,"empty",true,"Немає даних за цей період."); return; }
       renderChart(cc,history,pKey,getSelectedBase());
     }catch(err){
       if(chartRequestTokens[cc]!==requestToken) return;
+      clearChartHoverState(cc);
       cwrap?.classList.remove("loading");
       setMsg(cc,"err",true,`Помилка: ${String(err.message||err)}`);
     }
@@ -158,6 +178,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
 
   async function switchPeriod(cc,pKey){
     if(activePeriod[cc]===pKey&&chartInstances[cc]) return;
+    clearChartHoverState(cc);
     activePeriod[cc]=pKey;
     document.getElementById(`wrap-${cc}`)?.querySelectorAll(".period-tab").forEach((b)=>b.classList.toggle("active",b.dataset.period===pKey));
     await loadChart(cc,pKey);
@@ -362,6 +383,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
 
   function disposeCard(cc){
     if(!cc) return;
+    clearChartHoverState(cc);
     if(chartInstances[cc]){
       try{ chartInstances[cc].destroy(); }catch(_e){}
       delete chartInstances[cc];
@@ -388,9 +410,10 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
   }
 
   function refreshForBaseChange(displayCodes,nextBase){
+    const openCode=getOpenCardCode();
+    if(openCode) clearChartHoverState(openCode);
     resetSparklineMarkers(displayCodes);
     launchSparklinesPrefetch(()=>displayCodes,nextBase);
-    const openCode=getOpenCardCode();
     if(openCode) loadChart(openCode,activePeriod[openCode]||"30d");
   }
 
