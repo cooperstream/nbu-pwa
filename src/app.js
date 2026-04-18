@@ -18,8 +18,10 @@ let dashboardLoadToken=0;
 let isConverterFocused=false;
 let focusedMode="none";
 let listRevealTimer=0;
+let focusTapPointer=null;
 const LIST_REVEAL_CLASS="list-reveal";
 const LIST_REVEAL_DURATION_MS=165;
+const FOCUS_TAP_MOVE_THRESHOLD_PX=10;
 
 function triggerListReveal(){
   if(!grid) return;
@@ -44,6 +46,24 @@ function setFocusedMode(mode){
   if(prevMode==="converter"&&mode==="none"){
     triggerListReveal();
   }
+}
+
+function resetFocusTapPointer(){
+  focusTapPointer=null;
+}
+
+function isTapOnFocusableEmptySpace(target,clientY){
+  if(focusedMode==="card"){
+    const activeCard=grid.querySelector(".item-wrapper.active");
+    if(!activeCard || activeCard.contains(target)) return false;
+    return clientY>activeCard.getBoundingClientRect().bottom;
+  }
+  if(focusedMode==="converter"){
+    const activeConverter=headerEl?.querySelector(".header-converter-inner")||headerEl?.querySelector(".header-converter");
+    if(!activeConverter || activeConverter.contains(target)) return false;
+    return clientY>activeConverter.getBoundingClientRect().bottom;
+  }
+  return false;
 }
 
 const converter = createConverterUI({
@@ -199,6 +219,43 @@ document.addEventListener("visibilitychange",()=>{
   const last=parseInt(localStorage.getItem("nbu5_last_fetch")||"0",10);
   if(Date.now()-last>30*60*1000) loadDashboard(false);
 });
+document.addEventListener("pointerdown",(event)=>{
+  if(focusedMode==="none" || event.button!==0 || !event.isPrimary){
+    resetFocusTapPointer();
+    return;
+  }
+  focusTapPointer={
+    id:event.pointerId,
+    startX:event.clientX,
+    startY:event.clientY,
+    moved:false,
+  };
+});
+document.addEventListener("pointermove",(event)=>{
+  if(!focusTapPointer || event.pointerId!==focusTapPointer.id) return;
+  if(focusTapPointer.moved) return;
+  const deltaX=Math.abs(event.clientX-focusTapPointer.startX);
+  const deltaY=Math.abs(event.clientY-focusTapPointer.startY);
+  if(deltaX>FOCUS_TAP_MOVE_THRESHOLD_PX || deltaY>FOCUS_TAP_MOVE_THRESHOLD_PX){
+    focusTapPointer.moved=true;
+  }
+});
+document.addEventListener("pointerup",(event)=>{
+  if(!focusTapPointer || event.pointerId!==focusTapPointer.id){
+    return;
+  }
+  const shouldClose=!focusTapPointer.moved && isTapOnFocusableEmptySpace(event.target,event.clientY);
+  resetFocusTapPointer();
+  if(!shouldClose) return;
+  if(focusedMode==="card"){
+    cards?.closeActiveCard?.({ restoreScroll:true });
+    return;
+  }
+  if(focusedMode==="converter"){
+    converter.closeConverter();
+  }
+});
+document.addEventListener("pointercancel",resetFocusTapPointer);
 
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; installBtn.style.display="flex"; });
