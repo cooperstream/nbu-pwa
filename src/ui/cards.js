@@ -4,7 +4,6 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
   let savedScrollY=0;
   let hasSavedScroll=false;
   let focusModeTransitionToken=0;
-  let gridRevealToken=0;
 
   function parseTimeTokenToMs(token){
     const value=token.trim();
@@ -32,43 +31,12 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     return gridEl.querySelector(".item-wrapper.active")?.id?.replace("wrap-","")||null;
   }
 
-  function runGridRevealAnimation(){
-    const token=++gridRevealToken;
-    let finished=false;
-    gridEl.classList.remove("revealing-grid","revealing-grid-active");
-    // Force a style recalculation so the initial reveal state is applied before the active state.
-    void gridEl.offsetHeight;
-    gridEl.classList.add("revealing-grid");
-    const finish=()=>{
-      if(finished) return;
-      finished=true;
-      gridEl.removeEventListener("transitionend",onTransitionEnd);
-      window.clearTimeout(fallbackTimer);
-      if(token!==gridRevealToken) return;
-      gridEl.classList.remove("revealing-grid","revealing-grid-active");
-    };
-    const onTransitionEnd=(event)=>{
-      if(event.target!==gridEl) return;
-      if(event.propertyName!=="opacity" && event.propertyName!=="transform") return;
-      finish();
-    };
-    requestAnimationFrame(()=>{
-      if(token!==gridRevealToken) return;
-      gridEl.classList.add("revealing-grid-active");
-    });
-    const fallbackTimer=window.setTimeout(finish,280);
-    gridEl.addEventListener("transitionend",onTransitionEnd);
-  }
-
-  function setFocusMode(nextEnabled,{restoreScroll=false,revealGrid=false}={}){
+  function setFocusMode(nextEnabled,{restoreScroll=false}={}){
     if(nextEnabled && !hasSavedScroll){
       savedScrollY=window.scrollY;
       hasSavedScroll=true;
     }
     gridEl.classList.toggle("focused-card-mode",nextEnabled);
-    if(!nextEnabled && revealGrid){
-      runGridRevealAnimation();
-    }
     if(!nextEnabled && hasSavedScroll){
       const scrollTarget=savedScrollY;
       hasSavedScroll=false;
@@ -78,11 +46,11 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     }
   }
 
-  function syncFocusModeState({restoreScroll=false,revealGrid=false}={}){
-    setFocusMode(Boolean(getOpenCardCode()),{restoreScroll,revealGrid});
+  function syncFocusModeState({restoreScroll=false}={}){
+    setFocusMode(Boolean(getOpenCardCode()),{restoreScroll});
   }
 
-  function syncFocusModeAfterCloseTransition(closingWrap,{restoreScroll=false,revealGrid=false}={}){
+  function syncFocusModeAfterCloseTransition(closingWrap,{restoreScroll=false}={}){
     const closingDetails=closingWrap?.querySelector(".details");
     if(!closingDetails){
       syncFocusModeState({ restoreScroll });
@@ -96,7 +64,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       closingDetails.removeEventListener("transitionend",onTransitionEnd);
       window.clearTimeout(fallbackTimer);
       if(token!==focusModeTransitionToken) return;
-      syncFocusModeState({ restoreScroll, revealGrid });
+      syncFocusModeState({ restoreScroll });
     };
     const onTransitionEnd=(event)=>{
       if(event.target!==closingDetails) return;
@@ -112,7 +80,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     if(!activeWrap) return false;
     activeWrap.classList.remove("active");
     activeWrap.querySelector(".card")?.setAttribute("aria-expanded","false");
-    syncFocusModeAfterCloseTransition(activeWrap,{ restoreScroll, revealGrid:true });
+    syncFocusModeAfterCloseTransition(activeWrap,{ restoreScroll });
     return true;
   }
 
