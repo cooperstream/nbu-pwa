@@ -27,6 +27,15 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     setFocusMode(Boolean(getOpenCardCode()),{restoreScroll});
   }
 
+  function closeActiveCard({restoreScroll=true}={}){
+    const activeWrap=gridEl.querySelector(".item-wrapper.active");
+    if(!activeWrap) return false;
+    activeWrap.classList.remove("active");
+    activeWrap.querySelector(".card")?.setAttribute("aria-expanded","false");
+    syncFocusModeState({ restoreScroll });
+    return true;
+  }
+
   function buildDelta(today,prev,baseCode){
     if(prev==null) return `<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
     const diff=today-prev,pct=(diff/prev)*100;
@@ -144,9 +153,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     gridEl.querySelectorAll(".item-wrapper.active").forEach((el)=>{ if(el===w)return; el.classList.remove("active"); el.querySelector(".card")?.setAttribute("aria-expanded","false"); });
 
     if(wasOpen){
-      w.classList.remove("active");
-      btn.setAttribute("aria-expanded","false");
-      syncFocusModeState({ restoreScroll:true });
+      closeActiveCard({ restoreScroll:true });
       return;
     }
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
@@ -162,5 +169,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode };
+  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode, closeActiveCard };
 }
