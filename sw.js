@@ -53,9 +53,21 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_FALLBACK))
-    );
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+
+      try {
+        const networkResponse = await fetch(event.request);
+
+        if (event.request.method === 'GET' && networkResponse && networkResponse.ok) {
+          await cache.put(event.request, networkResponse.clone());
+        }
+
+        return networkResponse;
+      } catch (error) {
+        return (await caches.match(OFFLINE_FALLBACK)) || cache.match(event.request);
+      }
+    })());
     return;
   }
 
