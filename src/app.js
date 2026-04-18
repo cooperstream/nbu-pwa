@@ -57,10 +57,13 @@ const converter = createConverterUI({
   rateEl:document.getElementById("converter-rate"),
   onCloseActiveCards:()=>{
     cards?.closeActiveCard?.({ restoreScroll:true });
-    updateBaseButtons();
   },
   onFocusModeChange:(isFocused)=>{
-    setFocusedMode(isFocused?"converter":"none");
+    if(isFocused){
+      setFocusedMode("converter");
+      return;
+    }
+    if(focusedMode==="converter") setFocusedMode("none");
   },
 });
 
@@ -95,15 +98,16 @@ cards = createCardsUI({
   charts,
   onCloseConverter:()=>converter.closeConverter(),
   scheduleEnsureCardVisible,
+  onFocusModeChange:(isFocused)=>{
+    if(isFocused){
+      setFocusedMode("card");
+      return;
+    }
+    if(focusedMode==="card") setFocusedMode("none");
+  },
 });
 
 function updateBaseButtons(){
-  if(isConverterFocused){
-    headerEl?.classList.remove("has-open-card");
-    return;
-  }
-  const openCardCode=cards?.getOpenCardCode?.()||null;
-  setFocusedMode(openCardCode?"card":"none");
   document.querySelectorAll(".base-switcher .base-btn").forEach((btn)=>{
     const isActive=btn.dataset.base===selectedBase;
     btn.classList.toggle("active",isActive);
@@ -197,10 +201,7 @@ refreshBtn.addEventListener("click",()=>loadDashboard(true));
 grid.addEventListener("click",(e)=>{
   if(e.target.closest(".base-switcher-inline .base-btn")){
     handleBaseSwitchClick(e);
-    return;
   }
-  if(!e.target.closest(".card")) return;
-  requestAnimationFrame(updateBaseButtons);
 });
 baseSwitcher?.addEventListener("click",handleBaseSwitchClick);
 document.addEventListener("visibilitychange",()=>{

@@ -1,5 +1,7 @@
 import { fmtAmount, fmtRate, getConverterRate, ORDERED_CODES } from "../domain/rates.js";
 
+const CONVERTER_CLOSE_DURATION_MS=210;
+
 export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl, onCloseActiveCards, onFocusModeChange }){
   let converterFrom = "USD";
   let converterTo = "UAH";
@@ -191,9 +193,26 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
 
   function closeConverter(){
     closeAllPickers();
+    if(!headerEl.classList.contains("converter-open")) return;
+    const converterPanel=headerEl.querySelector(".header-converter");
+    let isFinalized=false;
+    const finalizeClose=()=>{
+      if(isFinalized) return;
+      isFinalized=true;
+      onFocusModeChange?.(false);
+    };
+    const onTransitionEnd=(event)=>{
+      if(event.target!==converterPanel || event.propertyName!=="max-height") return;
+      finalizeClose();
+    };
     headerEl.classList.remove("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","false");
-    onFocusModeChange?.(false);
+    if(converterPanel){
+      converterPanel.addEventListener("transitionend",onTransitionEnd,{ once:true });
+      window.setTimeout(finalizeClose,CONVERTER_CLOSE_DURATION_MS+40);
+    }else{
+      finalizeClose();
+    }
   }
 
   function bindEvents(){
