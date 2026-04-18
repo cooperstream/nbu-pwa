@@ -235,7 +235,7 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       if(event.propertyName!=="max-height" && event.propertyName!=="opacity") return;
       finish();
     };
-    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(converterPanel)+80);
+    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(converterPanel)+20);
     converterPanel.addEventListener("transitionend",onTransitionEnd);
   }
 

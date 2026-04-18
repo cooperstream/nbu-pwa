@@ -56,7 +56,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       if(token!==gridRevealToken) return;
       gridEl.classList.add("revealing-grid-active");
     });
-    const fallbackTimer=window.setTimeout(finish,280);
+    const fallbackTimer=window.setTimeout(finish,220);
     gridEl.addEventListener("transitionend",onTransitionEnd);
   }
 
@@ -103,7 +103,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       if(event.propertyName!=="max-height" && event.propertyName!=="opacity") return;
       finish();
     };
-    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(closingDetails)+80);
+    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(closingDetails)+20);
     closingDetails.addEventListener("transitionend",onTransitionEnd);
   }
 
@@ -252,5 +252,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode, closeActiveCard };
+  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode, closeActiveCard, revealGrid:runGridRevealAnimation };
 }

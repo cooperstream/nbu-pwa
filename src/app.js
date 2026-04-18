@@ -41,6 +41,9 @@ const converter = createConverterUI({
   },
   onFocusModeChange:(isFocused)=>{
     setFocusedMode(isFocused?"converter":"none");
+    if(!isFocused){
+      cards?.revealGrid?.();
+    }
   },
 });
 
