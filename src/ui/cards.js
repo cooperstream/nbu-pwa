@@ -2,7 +2,7 @@ import { BASE_CODES, CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/
 
 const CARD_CLOSE_DURATION_MS=210;
 
-export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible, onFocusModeChange }){
+export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, onFocusModeChange }){
   let savedScrollY=0;
   let hasSavedScroll=false;
 
@@ -37,6 +37,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     const finalizeClose=()=>{
       if(isFinalized) return;
       isFinalized=true;
+      activeWrap.classList.remove("active");
       activeWrap.classList.remove("closing");
       syncFocusModeState({ restoreScroll });
       onFocusModeChange?.(false);
@@ -46,7 +47,6 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       finalizeClose();
     };
     activeWrap.classList.add("closing");
-    activeWrap.classList.remove("active");
     activeWrap.querySelector(".card")?.setAttribute("aria-expanded","false");
     if(detailsEl){
       detailsEl.addEventListener("transitionend",onTransitionEnd,{ once:true });
@@ -183,11 +183,8 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
     syncFocusModeState();
     onFocusModeChange?.(true);
-    scheduleEnsureCardVisible(cc,40);
-
     const hasCanvas = !!document.getElementById(`chart-${cc}`);
     if(hasCanvas) await charts.loadChart(cc, charts.getActivePeriod(cc));
-    scheduleEnsureCardVisible(cc,150);
   }
 
   async function switchPeriod(cc,pKey){

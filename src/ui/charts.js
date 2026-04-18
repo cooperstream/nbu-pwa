@@ -49,7 +49,7 @@ function ensureChartJsLoaded(){
   return chartJsLoadPromise;
 }
 
-export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, scheduleEnsureCardVisible, setMsg, getOpenCardCode }){
+export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, getSelectedBase, setMsg, getOpenCardCode }){
   function clearChartHoverState(cc){
     if(!cc) return;
     const topTip=document.getElementById(`tip-${cc}`);
@@ -147,7 +147,7 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
       }
     });
 
-    requestAnimationFrame(()=>{ chartInstances[cc]?.resize(); scheduleEnsureCardVisible(cc,80); });
+    requestAnimationFrame(()=>{ chartInstances[cc]?.resize(); });
   }
 
   async function loadChart(cc,pKey){
@@ -182,7 +182,6 @@ export function createChartsUI({ getDisplayHistory, getDisplayHistoriesBatch, ge
     activePeriod[cc]=pKey;
     document.getElementById(`wrap-${cc}`)?.querySelectorAll(".period-tab").forEach((b)=>b.classList.toggle("active",b.dataset.period===pKey));
     await loadChart(cc,pKey);
-    scheduleEnsureCardVisible(cc,220);
   }
 
   async function runPrefetchSparklines(codes,baseCode){
