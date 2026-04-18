@@ -5,12 +5,12 @@
 .grid.focused-card-mode .item-wrapper.active{margin:0}
 .grid.revealing-grid{
   opacity:0;
-  transform:translateY(4px);
+  transform:translateY(6px);
 }
 .grid.revealing-grid.revealing-grid-active{
   opacity:1;
   transform:translateY(0);
-  transition:opacity .12s ease-out,transform .14s ease-out;
+  transition:opacity .14s ease-out,transform .18s ease-out;
 }
 .grid.focused-converter-mode{display:none}
 .card{width:100%;background:transparent;color:inherit;border:none;padding:clamp(12px, 1.6vh, 16px) 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;text-align:left}
