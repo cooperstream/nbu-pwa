@@ -41,7 +41,7 @@ function setFocusedMode(mode){
   grid.classList.toggle("focused-converter-mode",isConverterMode);
   headerEl?.classList.toggle("converter-focus",isConverterMode);
   headerEl?.classList.toggle("has-open-card",isCardFocused);
-  if(prevMode!=="none"&&mode==="none"){
+  if(prevMode==="converter"&&mode==="none"){
     triggerListReveal();
   }
 }
@@ -74,20 +74,11 @@ function setMsg(cc,type,visible,text){
   if(visible&&text!=null) el.textContent=text;
 }
 
-function ensureCardFullyVisible(cc, smooth=true){
-  const wrap=document.getElementById(`wrap-${cc}`); if(!wrap) return;
-  const rect=wrap.getBoundingClientRect();
-  if(rect.bottom > window.innerHeight - 12){ window.scrollBy({top:rect.bottom-window.innerHeight+12,behavior:smooth?"smooth":"auto"}); }
-  else if(rect.top < 10){ window.scrollBy({top:rect.top-10,behavior:smooth?"smooth":"auto"}); }
-}
-function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCardFullyVisible(cc),delay); }
-
 let cards;
 const charts = createChartsUI({
   getDisplayHistory,
   getDisplayHistoriesBatch,
   getSelectedBase:()=>selectedBase,
-  scheduleEnsureCardVisible,
   setMsg,
   getOpenCardCode:()=>cards?.getOpenCardCode?.()||null,
 });
@@ -97,7 +88,6 @@ cards = createCardsUI({
   getPrevMap:()=>getDisplayPrevMap(selectedBase,prevRatesByCode),
   charts,
   onCloseConverter:()=>converter.closeConverter(),
-  scheduleEnsureCardVisible,
   onFocusModeChange:(isFocused)=>{
     if(isFocused){
       setFocusedMode("card");
@@ -223,13 +213,9 @@ window.addEventListener("appinstalled",()=>{ deferredPrompt=null; installBtn.sty
 
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{})); }
 window.addEventListener("resize",()=>{
-  const active=document.querySelector(".item-wrapper.active");
-  if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),80);
   refreshSparklineTargetsForViewport();
 });
 window.addEventListener("orientationchange",()=>{
-  const active=document.querySelector(".item-wrapper.active");
-  if(active) scheduleEnsureCardVisible(active.id.replace("wrap-",""),250);
   refreshSparklineTargetsForViewport();
 });
 const sparklineViewportQuery=window.matchMedia("(max-width: 560px)");
