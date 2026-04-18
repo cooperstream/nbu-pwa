@@ -37,9 +37,17 @@ function ensureChartJsLoaded(){
   // Lazy Chart.js loader with singleton in-flight promise.
   chartJsLoadPromise=new Promise((resolve,reject)=>{
     const script=document.createElement("script");
-    script.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
+    script.src="vendor/chart.umd.min.js";
     script.async=true;
-    script.onload=()=>resolve(window.Chart);
+    script.onload=()=>{
+      if(window.Chart){ resolve(window.Chart); return; }
+      const readyPromise=window.__chartJsReadyPromise;
+      if(readyPromise&&typeof readyPromise.then==="function"){
+        readyPromise.then(()=>resolve(window.Chart)).catch(()=>reject(new Error("Не вдалося завантажити Chart.js")));
+        return;
+      }
+      reject(new Error("Не вдалося завантажити Chart.js"));
+    };
     script.onerror=()=>reject(new Error("Не вдалося завантажити Chart.js"));
     document.head.appendChild(script);
   }).finally(()=>{
