@@ -29,7 +29,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     setFocusMode(Boolean(getOpenCardCode()),{restoreScroll});
   }
 
-  function closeActiveCard({restoreScroll=true}={}){
+  function closeActiveCard({restoreScroll=false}={}){
     const activeWrap=gridEl.querySelector(".item-wrapper.active");
     if(!activeWrap) return false;
     const detailsEl=activeWrap.querySelector(".details");
@@ -37,7 +37,6 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     const finalizeClose=()=>{
       if(isFinalized) return;
       isFinalized=true;
-      activeWrap.classList.remove("active");
       activeWrap.classList.remove("closing");
       syncFocusModeState({ restoreScroll });
       onFocusModeChange?.(false);
@@ -47,6 +46,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       finalizeClose();
     };
     activeWrap.classList.add("closing");
+    activeWrap.classList.remove("active");
     activeWrap.querySelector(".card")?.setAttribute("aria-expanded","false");
     if(detailsEl){
       detailsEl.addEventListener("transitionend",onTransitionEnd,{ once:true });
@@ -177,7 +177,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     gridEl.querySelectorAll(".item-wrapper.active").forEach((el)=>{ if(el===w)return; el.classList.remove("active"); el.querySelector(".card")?.setAttribute("aria-expanded","false"); });
 
     if(wasOpen){
-      closeActiveCard({ restoreScroll:true });
+      closeActiveCard();
       return;
     }
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
