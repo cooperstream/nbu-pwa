@@ -37,7 +37,7 @@ function ensureChartJsLoaded(){
   // Lazy Chart.js loader with singleton in-flight promise.
   chartJsLoadPromise=new Promise((resolve,reject)=>{
     const script=document.createElement("script");
-    script.src=new URL("../../vendor/chart.umd.min.js",window.location.href).href;
+    script.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
     script.async=true;
     script.onload=()=>resolve(window.Chart);
     script.onerror=()=>reject(new Error("Не вдалося завантажити Chart.js"));
