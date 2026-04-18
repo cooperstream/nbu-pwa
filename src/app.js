@@ -70,13 +70,10 @@ function updateBaseButtons(){
   document.querySelectorAll(".base-switcher .base-btn").forEach((btn)=>{
     const isActive=btn.dataset.base===selectedBase;
     btn.classList.toggle("active",isActive);
-    btn.classList.remove("is-close-target");
   });
   document.querySelectorAll(".base-switcher-inline .base-btn").forEach((btn)=>{
     const isActive=btn.dataset.base===selectedBase;
-    const isCloseTarget=!isActive&&openCardCode&&btn.dataset.base===openCardCode;
     btn.classList.toggle("active",isActive);
-    btn.classList.toggle("is-close-target",Boolean(isCloseTarget));
   });
 }
 

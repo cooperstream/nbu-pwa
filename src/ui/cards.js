@@ -68,7 +68,10 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
           <div class="details-inner">
             <div class="base-switcher-inline" role="group" aria-label="Базова валюта">
               <div class="base-chips">
-                ${BASE_CODES.map((code)=>`<button class="base-btn${code===baseCode?' active':''}" type="button" data-base="${code}">${code}</button>`).join("")}
+                ${BASE_CODES
+                  .filter((code)=>code!==item.cc)
+                  .map((code)=>`<button class="base-btn${code===baseCode?' active':''}" type="button" data-base="${code}">${code}</button>`)
+                  .join("")}
               </div>
             </div>
             <div class="period-tabs" role="group" aria-label="Обрати період">
