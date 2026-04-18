@@ -43,6 +43,23 @@ function ensureCardFullyVisible(cc, smooth=true){
 }
 function scheduleEnsureCardVisible(cc,delay=0){ window.setTimeout(()=>ensureCardFullyVisible(cc),delay); }
 
+function captureOpenCardViewportTop(){
+  const openCardCode=cards?.getOpenCardCode?.()||null;
+  if(!openCardCode) return null;
+  const wrap=document.getElementById(`wrap-${openCardCode}`);
+  if(!wrap) return null;
+  return { cc:openCardCode, top:wrap.getBoundingClientRect().top };
+}
+
+function restoreOpenCardViewportTop(snapshot){
+  if(!snapshot) return;
+  const wrap=document.getElementById(`wrap-${snapshot.cc}`);
+  if(!wrap||!wrap.classList.contains("active")) return;
+  const delta=wrap.getBoundingClientRect().top-snapshot.top;
+  if(Math.abs(delta)<1) return;
+  window.scrollBy(0,delta);
+}
+
 let cards;
 const charts = createChartsUI({
   getDisplayHistory,
@@ -82,6 +99,7 @@ function handleBaseSwitchClick(e){
   if(!btn) return;
   const nextBase=btn.dataset.base;
   if(!BASE_CODES.includes(nextBase)||nextBase===selectedBase) return;
+  const openCardViewportTopSnapshot=captureOpenCardViewportTop();
   const prevBase=selectedBase;
   selectedBase=nextBase;
   updateBaseButtons();
@@ -89,6 +107,7 @@ function handleBaseSwitchClick(e){
   cards.syncCards(nextDisplayRates);
   charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
   updateBaseButtons();
+  restoreOpenCardViewportTop(openCardViewportTopSnapshot);
   // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
   if(prevBase!==selectedBase){
     converter.updateConverterResult();
