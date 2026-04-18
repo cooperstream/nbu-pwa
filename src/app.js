@@ -64,7 +64,12 @@ cards = createCardsUI({
 function updateBaseButtons(){
   const openCardCode=cards?.getOpenCardCode?.()||null;
   headerEl?.classList.toggle("has-open-card",Boolean(openCardCode));
-  document.querySelectorAll(".base-btn").forEach((btn)=>{
+  document.querySelectorAll(".base-switcher .base-btn").forEach((btn)=>{
+    const isActive=btn.dataset.base===selectedBase;
+    btn.classList.toggle("active",isActive);
+    btn.classList.remove("is-close-target");
+  });
+  document.querySelectorAll(".base-switcher-inline .base-btn").forEach((btn)=>{
     const isActive=btn.dataset.base===selectedBase;
     const isCloseTarget=!isActive&&openCardCode&&btn.dataset.base===openCardCode;
     btn.classList.toggle("active",isActive);
