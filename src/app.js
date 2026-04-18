@@ -25,7 +25,10 @@ const converter = createConverterUI({
   swapBtn:document.getElementById("converter-swap"),
   resultEl:document.getElementById("converter-result"),
   rateEl:document.getElementById("converter-rate"),
-  onCloseActiveCards:()=>updateBaseButtons(),
+  onCloseActiveCards:()=>{
+    cards?.closeActiveCard?.({ restoreScroll:true });
+    updateBaseButtons();
+  },
 });
 
 function setMsg(cc,type,visible,text){
