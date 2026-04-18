@@ -1,6 +1,7 @@
 import { fmtAmount, fmtRate, getConverterRate, ORDERED_CODES } from "../domain/rates.js";
 
 const CONVERTER_CLOSE_DURATION_MS=210;
+const MOBILE_PICKER_READY_CLASS="mobile-picker-ready";
 
 export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fromSelect, toSelect, swapBtn, resultEl, rateEl, onCloseActiveCards, onFocusModeChange }){
   let converterFrom = "USD";
@@ -16,6 +17,8 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     from: { select: fromSelect, trigger: fromTrigger, menu: fromMenu },
     to: { select: toSelect, trigger: toTrigger, menu: toMenu },
   };
+  let eventsBound=false;
+  let mobilePickerReady=false;
 
   function getConverterCodes(){ return ORDERED_CODES.filter((cc)=>cc==="UAH"||Number.isFinite(ratesByCode[cc])); }
 
@@ -182,9 +185,18 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
     amountInput.setSelectionRange(caretPosition, caretPosition);
   }
 
+  function enableMobilePicker(){
+    if(mobilePickerReady || !eventsBound) return;
+    if(!fromMenu?.children.length || !toMenu?.children.length) return;
+    syncPickerValues();
+    document.documentElement.classList.add(MOBILE_PICKER_READY_CLASS);
+    mobilePickerReady=true;
+  }
+
   function openConverter(){
     onCloseActiveCards?.();
     renderConverterOptions(); updateConverterResult();
+    enableMobilePicker();
     headerEl.classList.add("converter-open");
     converterOpenBtn?.setAttribute("aria-expanded","true");
     onFocusModeChange?.(true);
@@ -293,6 +305,7 @@ export function createConverterUI({ headerEl, converterOpenBtn, amountInput, fro
       if(openPickerName) positionPicker(openPickerName);
     });
     document.addEventListener("scroll",()=>{ if(openPickerName) positionPicker(openPickerName); }, true);
+    eventsBound=true;
   }
 
   return {

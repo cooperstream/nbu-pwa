@@ -63,6 +63,6 @@
   .header.converter-open .header-converter{max-height:420px}
   .header-converter-inner{padding:10px}
   .conv-row{gap:6px}
-  .conv-select{position:absolute;opacity:0;pointer-events:none;inset:0;height:38px}
-  .conv-picker{display:block}
+  .mobile-picker-ready .conv-select{position:absolute;opacity:0;pointer-events:none;inset:0;height:38px}
+  .mobile-picker-ready .conv-picker{display:block}
 }
