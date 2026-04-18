@@ -1,12 +1,16 @@
-const CACHE = 'nbu-pwa-v2';
+const CACHE = 'nbu-pwa-v3';
+const withScope = (path = '') => new URL(path, self.registration.scope).pathname;
+
 const APP_SHELL = [
-  '/nbu-pwa/',
-  '/nbu-pwa/index.html',
-  '/nbu-pwa/manifest.json',
-  '/nbu-pwa/icon-192.png',
-  '/nbu-pwa/icon-512.png',
-  '/nbu-pwa/icon-maskable-512.png'
+  withScope(''),
+  withScope('index.html'),
+  withScope('manifest.json'),
+  withScope('icon-192.png'),
+  withScope('icon-512.png'),
+  withScope('icon-maskable-512.png')
 ];
+
+const OFFLINE_FALLBACK = withScope('index.html');
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -37,7 +41,7 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/nbu-pwa/index.html'))
+      fetch(event.request).catch(() => caches.match(OFFLINE_FALLBACK))
     );
     return;
   }
