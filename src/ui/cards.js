@@ -3,6 +3,29 @@ import { BASE_CODES, CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/
 export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible }){
   let savedScrollY=0;
   let hasSavedScroll=false;
+  let focusModeTransitionToken=0;
+
+  function parseTimeTokenToMs(token){
+    const value=token.trim();
+    if(!value) return 0;
+    if(value.endsWith("ms")) return Number.parseFloat(value)||0;
+    if(value.endsWith("s")) return (Number.parseFloat(value)||0)*1000;
+    return Number.parseFloat(value)||0;
+  }
+
+  function getTransitionMaxDurationMs(el){
+    const style=window.getComputedStyle(el);
+    const durations=style.transitionDuration.split(",");
+    const delays=style.transitionDelay.split(",");
+    const listLength=Math.max(durations.length,delays.length);
+    let maxDuration=0;
+    for(let idx=0;idx<listLength;idx++){
+      const duration=parseTimeTokenToMs(durations[idx]??durations[durations.length-1]??"0s");
+      const delay=parseTimeTokenToMs(delays[idx]??delays[delays.length-1]??"0s");
+      maxDuration=Math.max(maxDuration,duration+delay);
+    }
+    return maxDuration;
+  }
 
   function getOpenCardCode(){
     return gridEl.querySelector(".item-wrapper.active")?.id?.replace("wrap-","")||null;
@@ -27,12 +50,37 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     setFocusMode(Boolean(getOpenCardCode()),{restoreScroll});
   }
 
+  function syncFocusModeAfterCloseTransition(closingWrap,{restoreScroll=false}={}){
+    const closingDetails=closingWrap?.querySelector(".details");
+    if(!closingDetails){
+      syncFocusModeState({ restoreScroll });
+      return;
+    }
+    const token=++focusModeTransitionToken;
+    let finished=false;
+    const finish=()=>{
+      if(finished) return;
+      finished=true;
+      closingDetails.removeEventListener("transitionend",onTransitionEnd);
+      window.clearTimeout(fallbackTimer);
+      if(token!==focusModeTransitionToken) return;
+      syncFocusModeState({ restoreScroll });
+    };
+    const onTransitionEnd=(event)=>{
+      if(event.target!==closingDetails) return;
+      if(event.propertyName!=="max-height" && event.propertyName!=="opacity") return;
+      finish();
+    };
+    const fallbackTimer=window.setTimeout(finish,getTransitionMaxDurationMs(closingDetails)+80);
+    closingDetails.addEventListener("transitionend",onTransitionEnd);
+  }
+
   function closeActiveCard({restoreScroll=true}={}){
     const activeWrap=gridEl.querySelector(".item-wrapper.active");
     if(!activeWrap) return false;
     activeWrap.classList.remove("active");
     activeWrap.querySelector(".card")?.setAttribute("aria-expanded","false");
-    syncFocusModeState({ restoreScroll });
+    syncFocusModeAfterCloseTransition(activeWrap,{ restoreScroll });
     return true;
   }
 
