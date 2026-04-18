@@ -1,5 +1,5 @@
 :root {
-  --bg: #0b1220; --panel: #111827; --panel-2: #0f172a;
+  --panel-2: #0f172a;
   --text: #e5e7eb; --muted: #94a3b8; --border: #243041;
   --primary: #22c55e; --primary-soft: rgba(34,197,94,0.16);
   --danger: #f87171; --shadow: 0 10px 30px rgba(0,0,0,0.28); --radius: 16px;

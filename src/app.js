@@ -15,7 +15,6 @@ let selectedBase="UAH";
 let ratesByCode={};
 let prevRatesByCode={};
 let dashboardLoadToken=0;
-let isConverterFocused=false;
 let focusedMode="none";
 let listRevealTimer=0;
 let focusTapPointer=null;
@@ -39,7 +38,6 @@ function setFocusedMode(mode){
   focusedMode=mode;
   const isCardFocused=mode==="card";
   const isConverterMode=mode==="converter";
-  isConverterFocused=isConverterMode;
   grid.classList.toggle("focused-converter-mode",isConverterMode);
   headerEl?.classList.toggle("converter-focus",isConverterMode);
   headerEl?.classList.toggle("has-open-card",isCardFocused);
@@ -139,7 +137,6 @@ function handleBaseSwitchClick(e){
   const nextDisplayRates=getDisplayRates(selectedBase,ratesByCode);
   cards.syncCards(nextDisplayRates);
   charts.refreshForBaseChange(nextDisplayRates.map((item)=>item.cc),selectedBase);
-  updateBaseButtons();
   // Preserve existing cards DOM; only local rate/delta/list updates are applied for base switching.
   if(prevBase!==selectedBase){
     converter.updateConverterResult();
