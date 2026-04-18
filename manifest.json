@@ -1,10 +1,10 @@
 {
-  "id": "/nbu-pwa/",
+  "id": "./",
   "name": "Курси Валют НБУ",
   "short_name": "Курси НБУ",
   "description": "Інтерактивний дашборд курсів валют НБУ з історією змін.",
-  "start_url": "/nbu-pwa/",
-  "scope": "/nbu-pwa/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
