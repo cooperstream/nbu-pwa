@@ -1,6 +1,32 @@
 import { BASE_CODES, CURRENCY_META, PERIODS, escHtml, fmtRate } from "../domain/rates.js";
 
 export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onCloseConverter, scheduleEnsureCardVisible }){
+  let savedScrollY=0;
+  let hasSavedScroll=false;
+
+  function getOpenCardCode(){
+    return gridEl.querySelector(".item-wrapper.active")?.id?.replace("wrap-","")||null;
+  }
+
+  function setFocusMode(nextEnabled,{restoreScroll=false}={}){
+    if(nextEnabled && !hasSavedScroll){
+      savedScrollY=window.scrollY;
+      hasSavedScroll=true;
+    }
+    gridEl.classList.toggle("focused-card-mode",nextEnabled);
+    if(!nextEnabled && hasSavedScroll){
+      const scrollTarget=savedScrollY;
+      hasSavedScroll=false;
+      if(restoreScroll){
+        requestAnimationFrame(()=>window.scrollTo({ top:scrollTarget, behavior:"auto" }));
+      }
+    }
+  }
+
+  function syncFocusModeState({restoreScroll=false}={}){
+    setFocusMode(Boolean(getOpenCardCode()),{restoreScroll});
+  }
+
   function buildDelta(today,prev,baseCode){
     if(prev==null) return `<span class="delta loading" aria-hidden="true">&nbsp;</span>`;
     const diff=today-prev,pct=(diff/prev)*100;
@@ -88,6 +114,7 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
       const expectedNode=gridEl.children[idx];
       if(expectedNode!==w) gridEl.insertBefore(w,expectedNode||null);
     });
+    syncFocusModeState({ restoreScroll:true });
   }
 
   function renderCards(rates){
@@ -114,10 +141,16 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     const wasOpen=w.classList.contains("active");
     if(!wasOpen) onCloseConverter();
 
-    document.querySelectorAll(".item-wrapper.active").forEach((el)=>{ if(el===w)return; el.classList.remove("active"); el.querySelector(".card")?.setAttribute("aria-expanded","false"); });
+    gridEl.querySelectorAll(".item-wrapper.active").forEach((el)=>{ if(el===w)return; el.classList.remove("active"); el.querySelector(".card")?.setAttribute("aria-expanded","false"); });
 
-    if(wasOpen){ w.classList.remove("active"); btn.setAttribute("aria-expanded","false"); return; }
+    if(wasOpen){
+      w.classList.remove("active");
+      btn.setAttribute("aria-expanded","false");
+      syncFocusModeState({ restoreScroll:true });
+      return;
+    }
     w.classList.add("active"); btn.setAttribute("aria-expanded","true");
+    syncFocusModeState();
     scheduleEnsureCardVisible(cc,40);
 
     const hasCanvas = !!document.getElementById(`chart-${cc}`);
@@ -129,5 +162,5 @@ export function createCardsUI({ gridEl, getSelectedBase, getPrevMap, charts, onC
     await charts.switchPeriod(cc,pKey);
   }
 
-  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode:() => document.querySelector('.item-wrapper.active')?.id?.replace('wrap-','')||null };
+  return { renderCards, syncCards, updateCardDeltas, toggleCard, switchPeriod, getOpenCardCode };
 }
